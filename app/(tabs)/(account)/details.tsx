@@ -1,11 +1,11 @@
 import { Link } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-export default function SettingsScreen() {
+export default function DetailsScreen() {
   return (
     <View style={styles.container}>
-      {/* <Text>Details</Text> */}
-      <Link href="/">INI ADALAH SETTING SCREEN</Link>
+      <Text>INI ADALAH DETAIL CLINIC</Text>
+      <Link href="/">LIHAT LIST CLINIC</Link>
     </View>
   );
 }
