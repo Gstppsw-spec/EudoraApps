@@ -1,18 +1,83 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { Link } from 'expo-router';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const NearbyScreen: React.FC = () => {
-  const navigation = useNavigation(); // Hook for navigation
+// Import gambar
+const images = {
+  SMS: require('@/assets/images/SMS.jpg'),
+  CentralPark: require('@/assets/images/CentralPark.jpg'),
+  BX: require('@/assets/images/BX.jpg'),
+  aeon: require('@/assets/images/aeon.jpg'),
+  LWG: require('@/assets/images/LWG.jpg'),
+  LWK: require('@/assets/images/LWK.jpg'),
+};
+
+// Sample clinic data
+const clinics = [
+  {
+    name: 'Eudora Kemang',
+    address: 'Kemang Raya. Jl Kemang Raya No 9',
+    image: images.SMS,
+    distance: '1.2 km',
+    rating: '4.8'
+  },
+  {
+    name: 'Eudora Aesthetic Clinic - Central Park Mall',
+    address: 'Central Park Mall, Lt. 3 Unit no L3-107A',
+    image: images.CentralPark,
+    distance: '2.5 km',
+    rating: '4.7'
+  },
+  {
+    name: 'Eudora Aesthetic Clinic - Bintaro',
+    address: 'Bintaro Xchange Mall, Jl. Lkr. Jaya',
+    image: images.BX,
+    distance: '3.1 km',
+    rating: '4.9'
+  },
+  {
+    name: 'Eudora Aesthetic Clinic - AEON JGC',
+    address: 'Aeon Mall Jgc, Jl. Jkt Garden City Boulevard No.1 2F-47',
+    image: images.aeon,
+    distance: '5.3 km',
+    rating: '4.6'
+  },
+  {
+    name: 'Eudora Aesthetic Clinic - Summarecon Mall Serpong',
+    address: 'Summarecon Mall Serpong, Lt 1F-17D',
+    image: images.SMS,
+    distance: '7.8 km',
+    rating: '4.5'
+  },
+  {
+    name: 'Eudora Aesthetic Clinic - Living World Grand Wisata',
+    address: 'Living World Grand Wisata, Jl. Esplanade Avenue, Lambangjaya',
+    image: images.LWG,
+    distance: '10.2 km',
+    rating: '4.8'
+  },
+  {
+    name: 'Eudora Aesthetic Clinic - Living World Kota Wisata',
+    address: 'Living World Kota Wisata Cibubur Unit 2, Jl. Boulevard Kota Wisata No.37 Lt 2',
+    image: images.LWK,
+    distance: '12.5 km',
+    rating: '4.7'
+  },
+];
+
+const IndexScreen: React.FC = () => {
+  const navigation = useNavigation();
 
   const handleSearchPress = () => {
-    navigation.navigate('SearchScreen'); // Ensure you have a SearchScreen defined in your navigator
+    navigation.navigate('SearchScreen');
   };
 
   return (
+    
     <View style={styles.container}>
-      {/* Header with Back, Title, and Search */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="black" />
@@ -22,144 +87,28 @@ const NearbyScreen: React.FC = () => {
           <FontAwesome name="search" size={20} color="black" />
         </TouchableOpacity>
       </View>
-      
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
-        {/* Clinic 1 */}
-        <View style={styles.clinicCard}>
-          <Image 
-            source={require('@/assets/images/SMS.jpg')} 
-            style={styles.clinicImage}
-          />
-          <View style={styles.clinicInfo}>
-            <Text style={styles.clinicName}>Eudora Kemang</Text>
-            <Text style={styles.clinicAddress}>Kemang Raya. Jl Kemang Raya No 9</Text>
-            <View style={styles.distanceRatingContainer}>
-              <Text style={styles.distanceText}>1.2 km</Text>
-              <FontAwesome name="arrow-up" size={12} color="#4CAF50" style={styles.arrowIcon} />
-              <Text style={styles.ratingText}>4.8</Text>
-            </View>
+
+      {/* Clinic List */}
+      <ScrollView style={styles.scrollContainer}>
+        {clinics.map((clinic, index) => (
+          <View key={index} style={styles.clinicCardContainer}>
+            <Link href={{ pathname: '/details', params: clinic }} asChild>
+              <TouchableOpacity style={styles.clinicCard}>
+                <Image source={clinic.image} style={styles.clinicImage} />
+                <View style={styles.clinicInfo}>
+                  <Text style={styles.clinicName}>{clinic.name}</Text>
+                  <Text style={styles.clinicAddress}>{clinic.address}</Text>
+                  <View style={styles.distanceRatingContainer}>
+                    <Text style={styles.distanceText}>{clinic.distance}</Text>
+                    <FontAwesome name="arrow-up" size={12} color="#4CAF50" style={styles.arrowIcon} />
+                    <Text style={styles.ratingText}>{clinic.rating}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Link>
+            {index < clinics.length - 1 && <View style={styles.divider} />}
           </View>
-        </View>
-        
-        {/* Divider */}
-        <View style={styles.divider} />
-        
-        {/* Clinic 2 */}
-        <View style={styles.clinicCard}>
-          <Image 
-            source={require('@/assets/images/CentralPark.jpg')} 
-            style={styles.clinicImage}
-          />
-          <View style={styles.clinicInfo}>
-            <Text style={styles.clinicName}>Eudora Aesthetic Clinic - Central Park Mall</Text>
-            <Text style={styles.clinicAddress}>Central Park Mall, Lt. 3 Unit no L3-107A</Text>
-            <View style={styles.distanceRatingContainer}>
-              <Text style={styles.distanceText}>1.2 km</Text>
-              <FontAwesome name="arrow-up" size={12} color="#4CAF50" style={styles.arrowIcon} />
-              <Text style={styles.ratingText}>4.8</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Clinic 3 */}
-        <View style={styles.clinicCard}>
-          <Image 
-            source={require('@/assets/images/BX.jpg')} 
-            style={styles.clinicImage}
-          />
-          <View style={styles.clinicInfo}>
-            <Text style={styles.clinicName}>Eudora Aesthetic Clinic - Bintaro</Text>
-            <Text style={styles.clinicAddress}>Bintaro Xchange Mall, Jl. Lkr. Jaya</Text>
-            <View style={styles.distanceRatingContainer}>
-              <Text style={styles.distanceText}>1.2 km</Text>
-              <FontAwesome name="arrow-up" size={12} color="#4CAF50" style={styles.arrowIcon} />
-              <Text style={styles.ratingText}>4.8</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Clinic 4 */}
-        <View style={styles.clinicCard}>
-          <Image 
-            source={require('@/assets/images/aeon.jpg')} 
-            style={styles.clinicImage}
-          />
-          <View style={styles.clinicInfo}>
-            <Text style={styles.clinicName}>Eudora Aesthetic Clinic - AEON JGC</Text>
-            <Text style={styles.clinicAddress}>Aeon Mall Jgc, Jl. Jkt Garden City Boulevard No.1 2F-47</Text>
-            <View style={styles.distanceRatingContainer}>
-              <Text style={styles.distanceText}>1.2 km</Text>
-              <FontAwesome name="arrow-up" size={12} color="#4CAF50" style={styles.arrowIcon} />
-              <Text style={styles.ratingText}>4.8</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Clinic 5 */}
-        <View style={styles.clinicCard}>
-          <Image 
-            source={require('@/assets/images/SMS.jpg')} 
-            style={styles.clinicImage}
-          />
-          <View style={styles.clinicInfo}>
-            <Text style={styles.clinicName}>Eudora Aesthetic Clinic - Summarecon Mall Serpong</Text>
-            <Text style={styles.clinicAddress}>Summarecon Mall Serpong, Lt 1F-17D</Text>
-            <View style={styles.distanceRatingContainer}>
-              <Text style={styles.distanceText}>1.2 km</Text>
-              <FontAwesome name="arrow-up" size={12} color="#4CAF50" style={styles.arrowIcon} />
-              <Text style={styles.ratingText}>4.8</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Clinic 6 */}
-        <View style={styles.clinicCard}>
-          <Image 
-            source={require('@/assets/images/LWG.jpg')} 
-            style={styles.clinicImage}
-          />
-          <View style={styles.clinicInfo}>
-            <Text style={styles.clinicName}>Eudora Aesthetic Clinic - Living World Grand Wisata</Text>
-            <Text style={styles.clinicAddress}>Living World Grand Wisata, Jl. Esplanade Avenue, Lambangjaya</Text>
-            <View style={styles.distanceRatingContainer}>
-              <Text style={styles.distanceText}>1.2 km</Text>
-              <FontAwesome name="arrow-up" size={12} color="#4CAF50" style={styles.arrowIcon} />
-              <Text style={styles.ratingText}>4.8</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Clinic 7 */}
-        <View style={styles.clinicCard}>
-          <Image 
-            source={require('@/assets/images/LWK.jpg')} 
-            style={styles.clinicImage}
-          />
-          <View style={styles.clinicInfo}>
-            <Text style={styles.clinicName}>Eudora Aesthetic Clinic - Living World Kota Wisata</Text>
-            <Text style={styles.clinicAddress}>Living World Kota Wisata Cibubur Unit 2, Jl. Boulevard Kota Wisata No.37 Lt 2</Text>
-            <View style={styles.distanceRatingContainer}>
-              <Text style={styles.distanceText}>1.2 km</Text>
-              <FontAwesome name="arrow-up" size={12} color="#4CAF50" style={styles.arrowIcon} />
-              <Text style={styles.ratingText}>4.8</Text>
-            </View>
-          </View>
-        </View>
+        ))}
       </ScrollView>
     </View>
   );
@@ -190,13 +139,14 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    paddingHorizontal: 16,
   },
-  scrollContent: {
-    padding: 16,
+  clinicCardContainer: {
+    marginBottom: 8,
   },
   clinicCard: {
     flexDirection: 'row',
-    marginBottom: 16,
+    paddingVertical: 16,
   },
   clinicImage: {
     width: 80,
@@ -237,9 +187,8 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#e0e0e0',
-    marginVertical: 16,
-    marginLeft: 96,
+    marginLeft: 96, // Match image width + margin
   },
 });
 
-export default NearbyScreen;
+export default IndexScreen;
