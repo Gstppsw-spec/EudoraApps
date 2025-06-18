@@ -38,7 +38,7 @@ const MyAccountScreen = () => {
             <Text style={styles.subSectionTitle}>Personal Data</Text>
             <View style={styles.menuItem}>
               <Text style={styles.menuText}>General</Text>
-              <MaterialIcons name="chevron-right" size={24} color="#999" />
+              {/* No arrow for General */}
             </View>
           </View>
           
@@ -48,7 +48,6 @@ const MyAccountScreen = () => {
             <Link href="/Notifications" style={styles.menuItem}>
               <Text style={styles.menuText}>Push Notification</Text>
             </Link>
-            
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuText}>Clear Cache</Text>
