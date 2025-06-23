@@ -1,15 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  View, 
-  ScrollView, 
+import {
   Alert,
   Animated,
-  Easing
+  Easing,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const NotificationDetail = () => {
@@ -25,7 +24,7 @@ const NotificationDetail = () => {
     setNotifications: setNotificationsString
   } = params;
 
-  const setNotifications = React.useCallback((updater) => {
+  const setNotifications = React.useCallback((updater: any) => {
     try {
       const fn = new Function('return ' + setNotificationsString)();
       if (typeof fn === 'function') {
@@ -79,7 +78,7 @@ const NotificationDetail = () => {
                 useNativeDriver: true,
               }),
             ]).start(() => {
-              setNotifications(prev => prev.filter(n => n.id !== id));
+              setNotifications((prev: any[]) => prev.filter(n => n.id !== id));
               router.back();
             });
           }
@@ -90,16 +89,6 @@ const NotificationDetail = () => {
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notification</Text>
-      </View>
-
       <Animated.ScrollView 
         contentContainerStyle={styles.scrollContent}
         style={{ transform: [{ scale: scaleAnim }] }}

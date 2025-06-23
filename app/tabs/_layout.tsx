@@ -11,7 +11,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="(home)"
+        name="home"
         options={{
           title: "Home",
           tabBarIcon: ({ color }) => (
@@ -20,7 +20,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="(clinic)"
+        name="clinic"
         options={{
           title: "Clinic",
           tabBarIcon: ({ color }) => (
@@ -30,7 +30,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="(consultation)"
+        name="consultation"
         options={{
           title: "Consultation",
           tabBarIcon: ({ color }) => (
@@ -40,7 +40,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="(account)"
+        name="account"
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => (
@@ -49,7 +49,6 @@ export default function TabLayout() {
         }}
       />
 
-      
     </Tabs>
   );
 }

@@ -1,13 +1,12 @@
-import { Stack } from "expo-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Slot } from "expo-router";
+
+const queryClient = new QueryClient();
 
 export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false
-      }}
-    >
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <QueryClientProvider client={queryClient}>
+      <Slot /> 
+    </QueryClientProvider>
   );
 }

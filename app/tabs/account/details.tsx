@@ -1,19 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router'; // Import Link from expo-router
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PersonalDataScreen = () => {
   return (
-    <View style={styles.container}>
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <Link href="/index" style={styles.backButton}> 
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </Link>
-        <Text style={styles.headerTitle}>Personal Data</Text>
-      </View>
-
+    <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
         {/* Avatar Section */}
         <View style={styles.avatarContainer}>
@@ -90,7 +81,7 @@ const PersonalDataScreen = () => {
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

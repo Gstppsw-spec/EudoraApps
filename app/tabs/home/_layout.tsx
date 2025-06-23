@@ -4,7 +4,8 @@ export default function RootLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown:false
+        headerShown:false,
+        gestureEnabled: true,
       }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="details" />
