@@ -10,22 +10,22 @@ export default function Index() {
   
 
   useEffect(() => {
-    if (customerId && hasPin) {
-      const timeout = setTimeout(() => {
-        router.push("/authentication/verifyPin");
-      }, 100);
-      return () => clearTimeout(timeout);
-    } else if (customerId && !hasPin) {
-      const timeout = setTimeout(() => {
-        router.push("/authentication/setPin");
-      }, 100);
-      return () => clearTimeout(timeout);
-    } else if (!customerId && !hasPin) {
+    // if (customerId && hasPin) {
+      // const timeout = setTimeout(() => {
+      //   router.push("/authentication/verifyPin");
+      // }, 100);
+      // return () => clearTimeout(timeout);
+    // } else if (customerId && !hasPin) {
       const timeout = setTimeout(() => {
         router.push("/authentication/otpWhatsapp");
       }, 100);
       return () => clearTimeout(timeout);
-    }
+    // } else if (!customerId && !hasPin) {
+      // const timeout = setTimeout(() => {
+      //   router.push("/authentication/otpWhatsap");
+      // }, 100);
+      // return () => clearTimeout(timeout);
+    // }
   }, []);
 
   return null;

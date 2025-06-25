@@ -3,16 +3,16 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import useStore from "../../store/useStore";
 
@@ -61,7 +61,6 @@ export default function SetPin() {
       return;
     }
 
-    // Lolos semua validasi
     mutation.mutate({
       customerId: customerId,
       pin: pin,
@@ -75,34 +74,60 @@ export default function SetPin() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
-          <Text style={styles.title}>Buat PIN Baru</Text>
-          <Text style={styles.instruction}>
-            Silakan buat PIN 4-6 digit untuk keamanan login
-          </Text>
+          <View style={styles.header}>
+            <Text style={styles.title}>Buat PIN Baru</Text>
+            <Text style={styles.subtitle}>
+              Buat PIN 4-6 digit untuk keamanan akun Anda
+            </Text>
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Masukkan PIN"
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={6}
-            value={pin}
-            onChangeText={setPin}
-          />
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>PIN Baru</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Masukkan 4-6 digit PIN"
+                placeholderTextColor="#999"
+                keyboardType="number-pad"
+                secureTextEntry
+                maxLength={6}
+                value={pin}
+                onChangeText={setPin}
+              />
+            </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Ulangi PIN"
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={6}
-            value={confirmPin}
-            onChangeText={setConfirmPin}
-          />
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Konfirmasi PIN</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ulangi PIN Anda"
+                placeholderTextColor="#999"
+                keyboardType="number-pad"
+                secureTextEntry
+                maxLength={6}
+                value={confirmPin}
+                onChangeText={setConfirmPin}
+              />
+            </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleSetPin}>
-            <Text style={styles.buttonText}>Simpan PIN</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, mutation.isPending && styles.buttonDisabled]} 
+              onPress={handleSetPin}
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Simpan PIN</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Pastikan PIN mudah diingat tetapi sulit ditebak
+            </Text>
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -112,43 +137,84 @@ export default function SetPin() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 24,
     justifyContent: "center",
-    paddingHorizontal: 30,
+  },
+  header: {
+    marginBottom: 40,
+    alignItems: "center",
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
-    color: "#FFB900",
-    textAlign: "center",
-    marginBottom: 10,
+    color: "#1e293b",
+    marginBottom: 8,
   },
-  instruction: {
-    textAlign: "center",
+  subtitle: {
     fontSize: 14,
-    color: "#555",
-    marginBottom: 30,
+    color: "#64748b",
+    textAlign: "center",
+    maxWidth: 300,
+  },
+  formContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 8,
   },
   input: {
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#FFB900",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 18,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 16,
+    color: "#1e293b",
     textAlign: "center",
-    letterSpacing: 5,
-    marginBottom: 15,
+    letterSpacing: 4,
   },
   button: {
-    backgroundColor: "#FFB900",
-    borderRadius: 10,
-    paddingVertical: 14,
+    backgroundColor: "#FEBA43",
+    borderRadius: 8,
+    padding: 16,
     alignItems: "center",
-    marginTop: 10,
+    justifyContent: "center",
+    marginTop: 8,
+    shadowColor: "#FEBA43",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "bold",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  footer: {
+    marginTop: 24,
+    alignItems: "center",
+  },
+  footerText: {
+    fontSize: 12,
+    color: "#94a3b8",
+    textAlign: "center",
   },
 });
