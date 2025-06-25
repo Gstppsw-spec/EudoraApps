@@ -55,7 +55,7 @@ const MyAccountScreen = () => {
             {/* Your Treatment Section */}
             <Link href="/treatment/yourTeatment" asChild>
               <TouchableOpacity style={styles.menuItem}>
-                <Text style={styles.menuText}>Your Treatment</Text>
+                <Text style={styles.menuText}>My Treatment</Text>
                 <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
