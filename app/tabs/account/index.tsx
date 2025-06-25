@@ -22,6 +22,7 @@ const MyAccountScreen = () => {
     setHasPin(false);
     router.replace("/authentication/otpWhatsapp");
   };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Profile Section */}
@@ -50,14 +51,22 @@ const MyAccountScreen = () => {
               <Text style={styles.menuText}>General</Text>
               {/* No arrow for General */}
             </View>
+
+            {/* Your Treatment Section */}
+            <Link href="/treatment/yourTeatment" asChild>
+              <TouchableOpacity style={styles.menuItem}>
+                <Text style={styles.menuText}>Your Treatment</Text>
+                <MaterialIcons name="chevron-right" size={24} color="#999" />
+              </TouchableOpacity>
+            </Link>
           </View>
 
           <View style={styles.sectionItem}>
             <Text style={styles.subSectionTitle}>Language</Text>
-
-            <Link href="/notification" asChild style={styles.menuItem}>
-              <TouchableOpacity>
+            <Link href="/notification" asChild>
+              <TouchableOpacity style={styles.menuItem}>
                 <Text style={styles.menuText}>Push Notification</Text>
+                <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
@@ -75,33 +84,39 @@ const MyAccountScreen = () => {
           <Text style={styles.sectionTitle}>About</Text>
 
           <View style={styles.sectionItem}>
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <Text style={styles.menuText}>Help Center</Text>
-              <MaterialIcons name="chevron-right" size={24} color="#999" />
-            </TouchableOpacity>
+            <Link href="/help-center" asChild>
+              <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                <Text style={styles.menuText}>Help Center</Text>
+                <MaterialIcons name="chevron-right" size={24} color="#999" />
+              </TouchableOpacity>
+            </Link>
 
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <Text style={styles.menuText}>Privacy & Policy</Text>
-              <MaterialIcons name="chevron-right" size={24} color="#999" />
-            </TouchableOpacity>
+            <Link href="/privacy-policy" asChild>
+              <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                <Text style={styles.menuText}>Privacy & Policy</Text>
+                <MaterialIcons name="chevron-right" size={24} color="#999" />
+              </TouchableOpacity>
+            </Link>
 
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <Text style={styles.menuText}>About App</Text>
-              <MaterialIcons name="chevron-right" size={24} color="#999" />
-            </TouchableOpacity>
+            <Link href="/about-app" asChild>
+              <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                <Text style={styles.menuText}>About App</Text>
+                <MaterialIcons name="chevron-right" size={24} color="#999" />
+              </TouchableOpacity>
+            </Link>
 
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <Text style={styles.menuText}>Terms & Conditions</Text>
-              <MaterialIcons name="chevron-right" size={24} color="#999" />
-            </TouchableOpacity>
+            <Link href="/terms-and-conditions" asChild>
+              <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                <Text style={styles.menuText}>Terms & Conditions</Text>
+                <MaterialIcons name="chevron-right" size={24} color="#999" />
+              </TouchableOpacity>
+            </Link>
 
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={handleLogOut}>
               <Text style={styles.menuText}>Logout</Text>
-              {/* <MaterialIcons name="chevron-right" size={24} color="#999" /> */}
             </TouchableOpacity>
           </View>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -111,19 +126,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f8f8",
-  },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 24,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#333",
   },
   profileSection: {
     backgroundColor: "#fff",
@@ -198,10 +200,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 14,
   },
-  menuTextContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   menuText: {
     fontSize: 16,
     color: "#333",
@@ -211,7 +209,6 @@ const styles = StyleSheet.create({
     color: "#999",
     marginLeft: 8,
   },
-
 });
 
 export default MyAccountScreen;

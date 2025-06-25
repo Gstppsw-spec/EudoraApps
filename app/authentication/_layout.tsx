@@ -22,6 +22,14 @@ export default function RootLayout() {
         }}
       />
 
+          <Stack.Screen
+        name="LoadingScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
+
+
     </Stack>
 
   );
