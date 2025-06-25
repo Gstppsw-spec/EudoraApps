@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import React, { useRef, useState } from "react";
 import {
@@ -14,11 +15,21 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import useStore from "../../../store/useStore";
 
 
-const canceledBooking = async (formData: any) => {
+const getMessages = async ({ queryKey }: any) => {
+  const [, customerId, employeeId] = queryKey;
+  const res = await fetch(
+    `https://sys.eudoraclinic.com:84/apieudora/getMessages?sender_id=${employeeId}&sender_type=employee&receiver_id=${customerId}&receiver_type=userapps`
+  );
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+};
+
+const sendMessages = async (formData: any) => {
   const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/canceledBooking';",
+    "https://sys.eudoraclinic.com:84/apieudora/sendMessages",
     formData,
     {
       headers: {
@@ -29,29 +40,27 @@ const canceledBooking = async (formData: any) => {
   return response.data;
 };
 
-
-
 const ChatScreen = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: "1",
-      text: "Hi there! How can I help you today?",
-      time: "10:30 AM",
-      sent: false,
+  const customerId = useStore((state: { customerid: any }) => state.customerid);
+  const employeeId = 10;
+  const queryClient = useQueryClient();
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
+    queryKey: ["getMessages", customerId, employeeId],
+    queryFn: getMessages,
+    enabled: !!customerId || !!employeeId,
+  });
+
+  const mutation = useMutation({
+    mutationFn: sendMessages,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(["getMessages", customerId, employeeId]);
     },
-    {
-      id: "2",
-      text: "I need help with my recent order",
-      time: "10:32 AM",
-      sent: true,
+    onError: (error) => {
+      console.error("Error posting data:", error);
     },
-    {
-      id: "3",
-      text: "Sure, what seems to be the problem?",
-      time: "10:33 AM",
-      sent: false,
-    },
-  ]);
+  });
+
+
   const [newMessage, setNewMessage] = useState("");
   const flatListRef = useRef(null);
 
@@ -61,16 +70,16 @@ const ChatScreen = () => {
     if (newMessage.trim() === "") return;
 
     const newMsg = {
-      id: Date.now().toString(),
-      text: newMessage,
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      sent: true,
+      sender_id: customerId,
+      sender_type: 'userapps',
+      receiver_id: employeeId,
+      receiver_type: 'employee',
+      message: newMessage,
+      type: 'text'
     };
 
-    setMessages((prevMessages) => [...prevMessages, newMsg]);
+    mutation.mutate(newMsg)
+
     setNewMessage("");
 
     setTimeout(() => {
@@ -78,14 +87,14 @@ const ChatScreen = () => {
     }, 100);
   };
 
-  const renderMessage = ({ item }) => (
+  const renderMessage = ({ item }: any) => (
     <View
       style={[
         styles.messageContainer,
-        item.sent ? styles.sentMessage : styles.receivedMessage,
+        item.receiver_type == 'employee' ? styles.sentMessage : styles.receivedMessage,
       ]}
     >
-      {!item.sent && (
+      {!item.employee && (
         <Image
           source={{ uri: "https://randomuser.me/api/portraits/women/44.jpg" }}
           style={styles.avatar}
@@ -94,13 +103,13 @@ const ChatScreen = () => {
       <View
         style={[
           styles.messageBubble,
-          item.sent ? styles.sentBubble : styles.receivedBubble,
+          item.receiver_type == 'employee' ? styles.sentBubble : styles.receivedBubble,
         ]}
       >
-        <Text style={item.sent ? styles.sentMessageText : styles.messageText}>
-          {item.text}
+        <Text style={item.receiver_type == 'employee' ? styles.sentMessageText : styles.messageText}>
+          {item.message}
         </Text>
-        <Text style={styles.messageTime}>{item.time}</Text>
+        <Text style={styles.messageTime}>{item.created_at}</Text>
       </View>
     </View>
   );
@@ -131,11 +140,10 @@ const ChatScreen = () => {
         {/* Chat Messages */}
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={data?.data}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
-          
           showsVerticalScrollIndicator={false}
         />
 
