@@ -1,63 +1,26 @@
 import React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View, RefreshControl } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+
+// Function to fetch treatment data from the API
+const fetchTreatments = async ({ queryKey }) => {
+  const [, customerId] = queryKey; // Destructure customer ID from query key
+  const res = await fetch(`https://sys.eudoraclinic.com:84/apieudora/getDetailTransactionTreatment/${customerId}`);
+  if (!res.ok) throw new Error("Network error"); // Handle network errors
+  const data = await res.json(); // Parse JSON response
+  console.log("Fetched Data:", data); // Log the fetched data for debugging
+  return data;
+};
 
 const YourTreatmentScreen = () => {
-  const treatments = [
-    {
-      invoiceNo: 'THOF2504047',
-      treatment: 'SD STUCTURE LIFT FACIAL TRIAL',
-      total: 1,
-      used: 0,
-      exchange: 0,
-      remaining: 1,
-      status: 'Ready'
-    },
-    {
-      invoiceNo: 'THOF2504046',
-      treatment: 'EXOSOME HAIR VITAL BOOST TRIAL',
-      total: 1,
-      used: 0,
-      exchange: 0,
-      remaining: 1,
-      status: 'Ready'
-    },
-    {
-      invoiceNo: 'THOF2504045',
-      treatment: '3 IN 1 RADIO FREQUENCY & SUCTION TRIAL',
-      total: 1,
-      used: 0,
-      exchange: 0,
-      remaining: 1,
-      status: 'Ready'
-    },
-    {
-      invoiceNo: 'THOF2504044',
-      treatment: 'EXOSOME HAIR VITAL BOOST TRIAL',
-      total: 1,
-      used: 0,
-      exchange: 0,
-      remaining: 1,
-      status: 'Ready'
-    },
-    {
-      invoiceNo: 'THOF2504043',
-      treatment: 'EXOSOME HAIR VITAL BOOST TRIAL',
-      total: 1,
-      used: 0,
-      exchange: 0,
-      remaining: 1,
-      status: 'Ready'
-    },
-    {
-      invoiceNo: 'THOF2504042',
-      treatment: 'INFUSION CHROMOSOME TRIAL',
-      total: 1,
-      used: 0,
-      exchange: 0,
-      remaining: 1,
-      status: 'Ready'
-    },
-  ];
+  const customerId = 5; // Replace with your customer ID if needed
+
+  // Use React Query to handle data fetching
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
+    queryKey: ['getDetailTransactionTreatment', customerId],
+    queryFn: fetchTreatments,
+        enabled: !!customerId,
+  });
 
   const renderItem = ({ item }) => (
     <View style={styles.itemContainer}>
@@ -65,38 +28,32 @@ const YourTreatmentScreen = () => {
         <Text style={styles.label}>Invoice No:</Text>
         <Text style={styles.value}>{item.invoiceNo}</Text>
       </View>
-      
       <View style={styles.row}>
         <Text style={styles.label}>Treatment:</Text>
         <Text style={[styles.value, styles.treatment]}>{item.treatment}</Text>
       </View>
-      
       <View style={styles.detailsRow}>
         <View style={styles.detailColumn}>
           <Text style={styles.detailLabel}>Total</Text>
           <Text style={styles.detailValue}>{item.total}</Text>
         </View>
-        
         <View style={styles.detailColumn}>
           <Text style={styles.detailLabel}>Used</Text>
           <Text style={styles.detailValue}>{item.used}</Text>
         </View>
-        
         <View style={styles.detailColumn}>
           <Text style={styles.detailLabel}>Exchange</Text>
           <Text style={styles.detailValue}>{item.exchange}</Text>
         </View>
-        
         <View style={styles.detailColumn}>
           <Text style={styles.detailLabel}>Remaining</Text>
           <Text style={styles.detailValue}>{item.remaining}</Text>
         </View>
       </View>
-      
       <View style={styles.statusContainer}>
         <Text style={[
           styles.statusText,
-          item.status === 'Ready' ? styles.readyStatus : styles.usedStatus
+          item.status === 'Ready' ? styles.readyStatus : styles.usedStatus,
         ]}>
           {item.status}
         </Text>
@@ -104,30 +61,40 @@ const YourTreatmentScreen = () => {
     </View>
   );
 
+  const onRefresh = () => {
+    refetch(); // Trigger a refetch of data
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Your Treatment Vouchers</Text>
-      
       <FlatList
-        data={treatments}
+        data={data?.customerBooking || []} // Access data safely
         renderItem={renderItem}
-        keyExtractor={item => item.invoiceNo}
+        keyExtractor={(item) => item.invoiceNo}
         contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={<Text style={styles.emptyText}>No treatments available.</Text>}
       />
+      {isLoading && <Text style={styles.loadingText}>Loading...</Text>}
+      {error && <Text style={styles.errorText}>Error loading treatments. Please try again.</Text>}
     </View>
   );
 };
 
+// Styles for the component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 16,
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
   },
   header: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginVertical: 20,
     color: '#333',
     textAlign: 'center',
   },
@@ -136,13 +103,13 @@ const styles = StyleSheet.create({
   },
   itemContainer: {
     backgroundColor: 'white',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 16,
-    marginBottom: 12,
-    elevation: 2,
+    marginBottom: 10,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 3,
   },
   row: {
@@ -150,8 +117,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: {
-    fontWeight: '600',
-    width: 90,
+    fontWeight: 'bold',
+    width: 100,
     color: '#555',
   },
   value: {
@@ -177,18 +144,18 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#333',
   },
   statusContainer: {
-    marginTop: 8,
+    marginTop: 10,
     alignItems: 'flex-end',
   },
   statusText: {
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
   readyStatus: {
@@ -198,6 +165,23 @@ const styles = StyleSheet.create({
   usedStatus: {
     backgroundColor: '#ffebee',
     color: '#f44336',
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#aaaaaa',
+    marginTop: 30,
+  },
+  loadingText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: "#333",
+    marginTop: 20,
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    margin: 10,
   },
 });
 
