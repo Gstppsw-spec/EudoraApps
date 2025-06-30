@@ -4,6 +4,7 @@ import axios from "axios";
 import { Link } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   RefreshControl,
@@ -130,7 +131,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
-        } 
+        }
       >
         <StatusBar
           translucent
@@ -322,7 +323,9 @@ export default function HomeScreen() {
           }}
         >
           {isLoading ? (
-            <Text>Loading...</Text>
+            <View style={styles.center}>
+              <ActivityIndicator size="large" />
+            </View>
           ) : error ? (
             <Text>Error..</Text>
           ) : data?.customerbooking?.length > 0 ? (
@@ -439,6 +442,11 @@ const IndicatorDot = ({ index, progressValue }: any) => {
 };
 
 const styles = StyleSheet.create({
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
     justifyContent: "center",

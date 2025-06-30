@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Link } from "expo-router";
 import React from "react";
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -49,7 +50,21 @@ const IndexScreen: React.FC = () => {
     queryFn: fetchListClinic,
   });
 
-  console.log(dataclinic, isLoadingclinic, "clinic");
+  if (isLoadingclinic) {
+      return (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" />
+        </View>
+      );
+    }
+  
+    if (errorclinic) {
+      return (
+        <View style={styles.center}>
+          <Text>Error loading messages: {errorclinic.message}</Text>
+        </View>
+      );
+    }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -191,6 +206,11 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#e0e0e0",
     marginLeft: 96, // Match image width + margin
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

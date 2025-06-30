@@ -7,14 +7,17 @@ const useStore = create(
     (set) => ({
       customerid: null,
       hasPin: false,
+      pendingRoute: null, // tambah ini
 
       setCustomerId: (id) => set({ customerid: id }),
       setHasPin: (status) => set({ hasPin: status }),
-      clearCustomerId: () => set({ customerid: null, hasPin: false }),
+      setPendingRoute: (route) => set({ pendingRoute: route }), // tambah setter ini
+      clearPendingRoute: () => set({ pendingRoute: null }), // optional, clear setelah navigasi
+      clearCustomerId: () => set({ customerid: null, hasPin: false, pendingRoute: null }),
     }),
     {
       name: 'user-storage',
-      storage: createJSONStorage(() => AsyncStorage), // ✅ ini penting
+      storage: createJSONStorage(() => AsyncStorage),
     }
   )
 );

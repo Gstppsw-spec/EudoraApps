@@ -1,12 +1,20 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Slot } from "expo-router";
-
-const queryClient = new QueryClient();
+import { useState } from "react";
+import Toast from "react-native-toast-message";
+import NotificationListener from "../app/component/notificationListener";
+import PushNotificationRegister from "../app/component/pushNotificationRegister";
+import { toastConfig } from "../config/toastConfig";
 
 export default function RootLayout() {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Slot /> 
+      <PushNotificationRegister />
+      <NotificationListener />
+      <Slot />
+      <Toast config={toastConfig} />
     </QueryClientProvider>
   );
 }

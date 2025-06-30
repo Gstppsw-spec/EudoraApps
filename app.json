@@ -2,6 +2,7 @@
   "expo": {
     "name": "DashboardCustomerEudora",
     "slug": "DashboardCustomerEudora",
+    "owner": "gstp_psw15",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,14 +10,24 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.DashboardCustomerEudora",
+      "permissions": [
+        "NOTIFICATIONS"
+      ],
+      "runtimeVersion": "1.0.0",
+      "googleServicesFile": "./android/app/google-services.json",
+      "useNextNotificationsApi": true
     },
     "web": {
       "bundler": "metro",
@@ -33,10 +44,20 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      ["expo-notifications"]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "984b7594-fc42-4a01-9042-c76436228bf1"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/984b7594-fc42-4a01-9042-c76436228bf1"
     }
   }
 }

@@ -1,8 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
@@ -41,6 +44,13 @@ export default function SetPin() {
     onSuccess: (data) => {
       if (data.status) {
         router.replace("/tabs/home");
+        registerForPushNotificationsAsync().then((token) => {
+            if (token) {
+              console.log("✅ Expo Push Token:", token);
+            } else {
+              console.log("❌ Tidak mendapatkan token");
+            }
+          });
       } else {
         Alert.alert("Gagal", data.message || "Gagal menyimpan PIN");
       }
@@ -132,6 +142,37 @@ export default function SetPin() {
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
+}
+
+async function registerForPushNotificationsAsync() {
+  try {
+    let token;
+    if (Device.isDevice) {
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      console.log("Status permission:", finalStatus);
+
+      if (finalStatus !== "granted") {
+        alert("Gagal mendapatkan permission notifikasi!");
+        return;
+      }
+
+      token = (await Notifications.getExpoPushTokenAsync()).data;
+      console.log("✅ Token:", token);
+    } else {
+      alert("Harus dijalankan di perangkat fisik!");
+    }
+
+    return token;
+  } catch (e) {
+    console.log("❌ Error saat register notifikasi:", e);
+  }
 }
 
 const styles = StyleSheet.create({

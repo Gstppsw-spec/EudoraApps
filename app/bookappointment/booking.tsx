@@ -5,6 +5,7 @@ import axios from "axios";
 import { Link } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -17,7 +18,7 @@ import {
   View,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
-import useStore from '../../store/useStore';
+import useStore from "../../store/useStore";
 
 const postData = async (formData: any) => {
   const response = await axios.post(
@@ -50,7 +51,7 @@ const BookingAppointmentScreen = () => {
   const [modalVisible, setModalVisible] = useState(false); // State for modal visibility
   const locationId = 6;
   const [remarks, setRemarks] = useState("");
-   const navigation = useNavigation();
+  const navigation = useNavigation();
 
   const {
     data: availableTime,
@@ -89,13 +90,13 @@ const BookingAppointmentScreen = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, paddingHorizontal: 5 }}>
-       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
+      <View style={styles.header}>
+        <Link href={'/tabs/clinic/details'} asChild>
+          <TouchableOpacity style={styles.headerButton}>
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+        </Link>
+
         <Text style={styles.mainHeader}>BOOK APPOINTMENT</Text>
       </View>
       <KeyboardAvoidingView
@@ -122,7 +123,9 @@ const BookingAppointmentScreen = () => {
           <Text style={styles.subHeader}>Select Time</Text>
           <View style={styles.timeContainer}>
             {isLoading ? (
-              <Text style={styles.timeText}>Loading...</Text>
+              <View style={styles.center}>
+                <ActivityIndicator size="large" />
+              </View>
             ) : error ? (
               <Text style={styles.timeText}>
                 Terjadi kesalahan saat mengambil data
@@ -185,7 +188,7 @@ const BookingAppointmentScreen = () => {
               <View style={styles.modalContent}>
                 <Text style={styles.modalText}>Booking Successful!</Text>
                 <Link
-                  href="/mybooking"
+                  href="/mybooking/mybooking"
                   style={styles.modalButton}
                   onPress={() => setModalVisible(false)}
                 >
@@ -295,7 +298,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
     marginBottom: 10,
   },
-   header: {
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -306,13 +309,20 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
+    borderRadius: 80,
+    borderWidth: 0.2
   },
   mainHeader: {
     fontSize: 17,
     fontWeight: "bold",
     textAlign: "center",
     flex: 1,
-    marginLeft: -50
+    marginLeft: -50,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

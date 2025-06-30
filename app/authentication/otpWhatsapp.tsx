@@ -1,11 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -13,9 +18,6 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  ActivityIndicator,
-  Modal,
-  Image
 } from "react-native";
 import useStore from "../../store/useStore";
 
@@ -60,7 +62,7 @@ export default function Login() {
     mutationFn: sendOtp,
     onSuccess: (data) => {
       console.log(data);
-      
+
       if (data.status) {
         setShowSuccessModal(true);
         setTimeout(() => {
@@ -95,6 +97,13 @@ export default function Login() {
         setHasPin(data.has_pin);
         if (data.has_pin) {
           router.replace("/tabs/home");
+          registerForPushNotificationsAsync().then((token) => {
+            if (token) {
+              console.log("✅ Expo Push Token:", token);
+            } else {
+              console.log("❌ Tidak mendapatkan token");
+            }
+          });
         } else {
           router.replace("/authentication/setPin");
         }
@@ -134,16 +143,16 @@ export default function Login() {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Image 
-                source={require('@/assets/images/logo.jpg')}
+              <Image
+                source={require("@/assets/images/logo.jpg")}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
             </View>
             <Text style={styles.title}>Selamat Datang</Text>
             <Text style={styles.subtitle}>
-              {step === 1 
-                ? "Masukkan nomor WhatsApp untuk melanjutkan" 
+              {step === 1
+                ? "Masukkan nomor WhatsApp untuk melanjutkan"
                 : "Masukkan kode verifikasi yang telah dikirim"}
             </Text>
           </View>
@@ -180,16 +189,15 @@ export default function Login() {
                   textAlign="center"
                   maxLength={6}
                 />
-                <Text style={styles.otpNote}>
-                  Kode dikirim ke +62{phone}
-                </Text>
+                <Text style={styles.otpNote}>Kode dikirim ke +62{phone}</Text>
               </View>
             )}
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.button,
-                (mutation.isPending || mutatioVerifyOtp.isPending) && styles.buttonDisabled
+                (mutation.isPending || mutatioVerifyOtp.isPending) &&
+                  styles.buttonDisabled,
               ]}
               onPress={step === 1 ? handleSendOtp : handleVerifyOtp}
               disabled={mutation.isPending || mutatioVerifyOtp.isPending}
@@ -204,7 +212,7 @@ export default function Login() {
             </TouchableOpacity>
 
             {step === 2 && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.resendButton}
                 onPress={handleSendOtp}
               >
@@ -260,7 +268,7 @@ export default function Login() {
                 <Text style={styles.modalMessage}>
                   Harap masukkan nomor WhatsApp terlebih dahulu
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.modalButton}
                   onPress={() => setShowErrorModal(false)}
                 >
@@ -287,13 +295,13 @@ export default function Login() {
                   Apakah Anda yakin ingin memverifikasi kode OTP?
                 </Text>
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.modalButtonCancel}
                     onPress={() => setShowConfirmModal(false)}
                   >
                     <Text style={styles.modalButtonCancelText}>Batal</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.modalButton}
                     onPress={confirmVerification}
                   >
@@ -307,6 +315,37 @@ export default function Login() {
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
+}
+
+async function registerForPushNotificationsAsync() {
+  try {
+    let token;
+    if (Device.isDevice) {
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      console.log("Status permission:", finalStatus);
+
+      if (finalStatus !== "granted") {
+        alert("Gagal mendapatkan permission notifikasi!");
+        return;
+      }
+
+      token = (await Notifications.getExpoPushTokenAsync()).data;
+      console.log("✅ Token:", token);
+    } else {
+      alert("Harus dijalankan di perangkat fisik!");
+    }
+
+    return token;
+  } catch (e) {
+    console.log("❌ Error saat register notifikasi:", e);
+  }
 }
 
 const styles = StyleSheet.create({

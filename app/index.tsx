@@ -6,9 +6,6 @@ export default function Index() {
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const hasPin = useStore((state: { hasPin: any }) => state.hasPin);
 
-  console.log(customerId, hasPin);
-  
-
   useEffect(() => {
     if (customerId && hasPin) {
       const timeout = setTimeout(() => {

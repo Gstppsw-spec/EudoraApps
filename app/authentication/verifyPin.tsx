@@ -3,16 +3,16 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import useStore from "../../store/useStore";
 
@@ -30,6 +30,8 @@ const verifyPinUsers = async (formData: any) => {
 };
 
 export default function VerifyPin() {
+  const pendingRoute = useStore((state) => state.pendingRoute);
+  const setPendingRoute = useStore((state) => state.setPendingRoute);
   const router = useRouter();
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const [pin, setPin] = useState("");
@@ -38,7 +40,12 @@ export default function VerifyPin() {
     mutationFn: verifyPinUsers,
     onSuccess: (data) => {
       if (data.status) {
-        router.replace("/tabs/home");
+        if (pendingRoute) {
+          router.push("/" + pendingRoute);
+          setPendingRoute(null);
+        } else {
+          router.replace("/tabs/home");
+        }
       } else {
         Alert.alert("PIN Salah", data.message);
       }
