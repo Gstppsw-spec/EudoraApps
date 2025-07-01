@@ -221,7 +221,7 @@ router.replace("/authentication/setPin");
                     <View style={styles.dropdown}>
                       {clinicOptions.map((option, index) => (
                         <Pressable
-                          key={index}
+                          key={index}  
                           style={styles.dropdownItem}
                           onPress={() => {
                             handleChange("clinicLocation", option);

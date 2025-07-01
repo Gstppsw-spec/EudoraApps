@@ -247,41 +247,39 @@ export default function HomeScreen() {
 
         {/* Categories Section */}
         <View style={styles.categoriesContainer}>
-          <View style={styles.categoryItem}>
-            <TouchableOpacity style={styles.categoryIcon}>
-              <FontAwesome name="facebook-official" size={18} color="#FFB900" />
+          <Link href="/kategori/face" asChild>
+            <TouchableOpacity style={styles.categoryItem}>
+              <View style={styles.categoryIcon}>
+                <FontAwesome name="facebook-official" size={24} color="#FFB900" />
+              </View>
+              <Text style={styles.categoryText}>Face</Text>
             </TouchableOpacity>
-            <Text style={styles.categoryText}>Face</Text>
-          </View>
+          </Link>
 
-          <View style={styles.categoryItem}>
-            <TouchableOpacity style={styles.categoryIcon}>
-              <FontAwesome name="automobile" size={18} color="#FFB900" />
+          <Link href="/kategori/body" asChild>
+            <TouchableOpacity style={styles.categoryItem}>
+              <View style={styles.categoryIcon}>
+                <FontAwesome name="automobile" size={24} color="#FFB900" />
+              </View>
+              <Text style={styles.categoryText}>Body</Text>
             </TouchableOpacity>
-            <Text style={styles.categoryText}>Body</Text>
-          </View>
+          </Link>
 
-          <View style={styles.categoryItem}>
-            <TouchableOpacity style={styles.categoryIcon}>
-              <FontAwesome name="shopping-bag" size={18} color="#FFB900" />
+          <Link href="/kategori/product" asChild>
+            <TouchableOpacity style={styles.categoryItem}>
+              <View style={styles.categoryIcon}>
+                <FontAwesome name="shopping-bag" size={24} color="#FFB900" />
+              </View>
+              <Text style={styles.categoryText}>Product</Text>
             </TouchableOpacity>
-            <Text style={styles.categoryText}>Product</Text>
-          </View>
+          </Link>
 
-          <View style={styles.categoryItem}>
-            <TouchableOpacity style={styles.categoryIcon}>
-              <FontAwesome name="files-o" size={18} color="#FFB900" />
-            </TouchableOpacity>
-            <Text style={styles.categoryText}>More</Text>
-          </View>
-        </View>
-
-        {/* Appointments Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
-          <Link href={"/mybooking/mybooking"} asChild>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
+          <Link href="/kategori/more" asChild>
+            <TouchableOpacity style={styles.categoryItem}>
+              <View style={styles.categoryIcon}>
+                <FontAwesome name="files-o" size={24} color="#FFB900" />
+              </View>
+              <Text style={styles.categoryText}>More</Text>
             </TouchableOpacity>
           </Link>
         </View>
@@ -399,7 +397,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: "black",
-    minHeight: 240, // Increased height
+    minHeight: 240,
     paddingBottom: 20,
     alignItems: "center",
   },
@@ -428,7 +426,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     marginTop: 15,
-    marginBottom: 20, // Added space below user info
+    marginBottom: 20,
   },
   userName: {
     color: "white",
@@ -539,16 +537,20 @@ const styles = StyleSheet.create({
   },
   categoryItem: {
     alignItems: "center",
+    justifyContent: "center",
   },
   categoryIcon: {
     borderWidth: 0.1,
     borderRadius: 100,
     padding: 20,
     backgroundColor: "#FFF8E6",
-    marginBottom: 5,
+    marginBottom: 8,
   },
   categoryText: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: "500",
+    textAlign: "center",
+    width: 60,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -655,3 +657,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+

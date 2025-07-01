@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; // Using Ionicons for the back button
 import { Link } from 'expo-router';
 
 const pointsData = {
@@ -99,19 +99,18 @@ export default function PointsDetail() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Header with combined navigation */}
+        {/* Header with back navigation */}
         <View style={styles.header}>
           <View style={styles.navContainer}>
             <Link href="/tabs/home" asChild>
               <TouchableOpacity style={styles.navButton}>
-                <FontAwesome name="chevron-left" size={20} color="#000000" />
+                <Ionicons name="arrow-back" size={24} color="#000000" />
               </TouchableOpacity>
             </Link>
-          
           </View>
-          
+
           <Text style={styles.title}>Riwayat Poin</Text>
-          
+
           <View style={styles.headerRight} />
         </View>
 
@@ -137,7 +136,7 @@ export default function PointsDetail() {
               renderPoints()
             ) : (
               <View style={styles.emptyState}>
-                <FontAwesome name="file-text-o" size={50} color="#E0E0E0" />
+                <Ionicons name="file-text-outline" size={50} color="#E0E0E0" />
                 <Text style={styles.emptyText}>Tidak ada riwayat poin</Text>
               </View>
             )}
