@@ -1,318 +1,411 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import axios from "axios";
-import { Link } from "expo-router";
-import React, { useState } from "react";
-import {
-  KeyboardAvoidingView,
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
   Modal,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
   TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Calendar } from "react-native-calendars";
-import useStore from '../../store/useStore';
-
-const postData = async (formData: any) => {
-  const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/insertBookingByCustomer",
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
-  return response.data;
-};
-
-const fetchAvailableTime = async ({ queryKey }: any) => {
-  const [, date, locationId] = queryKey;
-  const res = await fetch(
-    `https://sys.eudoraclinic.com:84/apieudora/getTimeAvailable/${date}/${locationId}`
-  );
-  if (!res.ok) throw new Error("Network error");
-  return res.json();
-};
+  ScrollView,
+  SafeAreaView,
+  Platform,
+  KeyboardAvoidingView,
+  Pressable
+} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { Calendar } from 'react-native-calendars';
+import { Ionicons } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 
 const BookingAppointmentScreen = () => {
-  const setCustomerId = useStore((state) => state.setCustomerId);
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
-  const [selectedTime, setSelectedTime] = useState("");
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false); // State for modal visibility
-  const locationId = 6;
-  const [remarks, setRemarks] = useState("");
-   const navigation = useNavigation();
+  const [selectedTime, setSelectedTime] = useState('');
+  const [selectedTreatment, setSelectedTreatment] = useState('');
+  const [customTreatment, setCustomTreatment] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [showTreatmentDropdown, setShowTreatmentDropdown] = useState(false);
+  
+  const TREATMENT_OPTIONS = [
+    { label: 'Pilih Treatment', value: '' },
+    { label: 'Facial Treatment', value: 'facial' },
+    { label: 'Chemical Peel', value: 'chemical' },
+    { label: 'Microdermabrasion', value: 'micro' },
+    { label: 'Laser Hair Removal', value: 'laser' },
+    { label: 'Lainnya (Tulis sendiri)', value: 'other' },
+  ];
 
-  const {
-    data: availableTime,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["getTimeAvailable", selectedDate, locationId],
-    queryFn: fetchAvailableTime,
-    enabled: !!selectedDate && !!locationId,
-  });
+  const availableTimes = [
+    '10:00', '11:00', '12:00', '13:00', '14:00', 
+    '15:00', '16:00', '17:00', '18:00', '19:00'
+  ];
 
-  const mutation = useMutation({
-    mutationFn: postData,
-    onSuccess: (data) => {
-      setModalVisible(true);
-    },
-    onError: (error) => {
-      console.error("Error posting data:", error);
-    },
-  });
-
-  const handleBooking = () => {
-    if (selectedDate && selectedTime && selectedEmployee) {
-      mutation.mutate({
-        appointmentdate: selectedDate,
-        booktime: selectedTime,
-        service: remarks,
-        locationId: 6,
-        customerid: 5,
-        employeeid: selectedEmployee,
-      });
-    } else {
-      alert("Please select both a date and a time.");
+  const handleSubmit = () => {
+    if (!selectedDate || !selectedTime) {
+      alert('Harap pilih tanggal dan waktu terlebih dahulu');
+      return;
     }
+
+    if (!selectedTreatment) {
+      alert('Harap pilih treatment');
+      return;
+    }
+
+    if (selectedTreatment === 'other' && !customTreatment) {
+      alert('Harap tulis treatment Anda');
+      return;
+    }
+
+    setShowModal(true);
+  };
+
+  const getSelectedTreatmentLabel = () => {
+    const selected = TREATMENT_OPTIONS.find(opt => opt.value === selectedTreatment);
+    return selected ? selected.label : "Pilih Treatment";
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, paddingHorizontal: 5 }}>
-       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.mainHeader}>BOOK APPOINTMENT</Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Link href="/tabs/clinic/details" asChild>
+          <TouchableOpacity style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+        </Link>
+        <Text style={styles.headerTitle}>BOOK APPOINTMENT</Text>
       </View>
+
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={80} // sesuaikan jika header menutup input
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={90}
       >
-        <ScrollView
-          showsHorizontalScrollIndicator={false}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.subHeader}>Select DATE</Text>
-          <Calendar
-            onDayPress={(day: { dateString: React.SetStateAction<string> }) => {
-              setSelectedDate(day.dateString);
-            }}
-            markedDates={{
-              [selectedDate]: { selected: true, selectedColor: "#FFA500" },
-            }}
-            minDate={today}
-            style={styles.calendar}
-          />
+          {/* Date Selection */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>PILIH TANGGAL</Text>
+            <Calendar
+              onDayPress={(day) => setSelectedDate(day.dateString)}
+              markedDates={{
+                [selectedDate]: { selected: true, selectedColor: '#FFA500' },
+              }}
+              minDate={today}
+              style={styles.calendar}
+              theme={{
+                calendarBackground: '#FFF',
+                textSectionTitleColor: '#333',
+                selectedDayBackgroundColor: '#FFA500',
+                selectedDayTextColor: '#FFF',
+                todayTextColor: '#FFA500',
+                dayTextColor: '#333',
+                textDisabledColor: '#DDD',
+                arrowColor: '#FFA500',
+                textDayFontFamily: 'Inter-Regular',
+                textMonthFontFamily: 'Inter-SemiBold',
+                textDayHeaderFontFamily: 'Inter-Medium',
+              }}
+            />
+          </View>
 
-          <Text style={styles.subHeader}>Select Time</Text>
-          <View style={styles.timeContainer}>
-            {isLoading ? (
-              <Text style={styles.timeText}>Loading...</Text>
-            ) : error ? (
-              <Text style={styles.timeText}>
-                Terjadi kesalahan saat mengambil data
-              </Text>
-            ) : availableTime?.availableTimeEmployee?.length > 0 ? (
-              availableTime.availableTimeEmployee.map(
-                (time: any, index: number) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.timeButton,
-                      selectedTime === time.TIME && styles.selectedTime,
-                    ]}
-                    onPress={() => {
-                      setSelectedTime(time.TIME);
-                      setSelectedEmployee(time.EMPLOYEEID);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.timeText,
-                        selectedTime === time.TIME && styles.selectedTimeText,
-                      ]}
-                    >
-                      {time.TIME}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              )
-            ) : (
-              <Text style={styles.timeText}>Tidak ada waktu tersedia</Text>
+          {/* Time Selection */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>PILIH WAKTU</Text>
+            <View style={styles.timeGrid}>
+              {availableTimes.map((time) => (
+                <TouchableOpacity
+                  key={time}
+                  style={[
+                    styles.timeSlot,
+                    selectedTime === time && styles.selectedTimeSlot,
+                  ]}
+                  onPress={() => setSelectedTime(time)}
+                >
+                  <Text style={[
+                    styles.timeText,
+                    selectedTime === time && styles.selectedTimeText
+                  ]}>
+                    {time}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Treatment Selection */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>PILIH TREATMENT</Text>
+            <View style={styles.inputGroup}>
+              <Pressable 
+                style={styles.input} 
+                onPress={() => setShowTreatmentDropdown(!showTreatmentDropdown)}
+              >
+                <Text style={styles.inputText}>{getSelectedTreatmentLabel()}</Text>
+                <Ionicons 
+                  name={showTreatmentDropdown ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color="#666" 
+                  style={styles.dropdownIcon}
+                />
+              </Pressable>
+              
+              {showTreatmentDropdown && (
+                <View style={styles.dropdown}>
+                  <ScrollView style={styles.dropdownScroll}>
+                    {TREATMENT_OPTIONS.map((option, index) => (
+                      <Pressable
+                        key={index}
+                        style={[
+                          styles.dropdownItem,
+                          selectedTreatment === option.value && styles.selectedDropdownItem
+                        ]}
+                        onPress={() => {
+                          setSelectedTreatment(option.value);
+                          setShowTreatmentDropdown(false);
+                          if (option.value !== 'other') {
+                            setCustomTreatment('');
+                          }
+                        }}
+                      >
+                        <Text style={styles.dropdownItemText}>{option.label}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            {/* Custom Treatment Input */}
+            {selectedTreatment === 'other' && (
+              <TextInput
+                style={[styles.input, styles.customInput]}
+                placeholder="Tulis treatment Anda"
+                placeholderTextColor="#999"
+                value={customTreatment}
+                onChangeText={setCustomTreatment}
+              />
             )}
           </View>
 
-          <Text style={styles.subHeader}>Treatment</Text>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Masukkan catatan treatment yang ingin dilakukan disini."
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-            value={remarks}
-            onChangeText={setRemarks}
-          />
-
+          {/* Submit Button */}
           <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleBooking}
+            style={styles.submitButton}
+            onPress={handleSubmit}
           >
-            <Text style={styles.buttonText}>Continue</Text>
+            <Text style={styles.buttonText}>LANJUTKAN</Text>
           </TouchableOpacity>
-
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalText}>Booking Successful!</Text>
-                <Link
-                  href="/mybooking"
-                  style={styles.modalButton}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={styles.buttonText}>OK</Text>
-                </Link>
-              </View>
-            </View>
-          </Modal>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="checkmark-circle" size={60} color="#4CAF50" style={styles.modalIcon} />
+            <Text style={styles.modalTitle}>Booking Berhasil!</Text>
+            <Text style={styles.modalText}>Anda telah berhasil melakukan booking appointment.</Text>
+            <Link href="/mybooking/mybooking" asChild>
+              <TouchableOpacity 
+                style={styles.modalButton} 
+                onPress={() => setShowModal(false)}
+              >
+                <Text style={styles.buttonText}>OK</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFF',
+  },
   container: {
     flex: 1,
+    paddingHorizontal: 16,
+  },
+  scrollContent: {
+    paddingBottom: 30,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
-    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
   },
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
+  backButton: {
+    padding: 8,
   },
-  subHeader: {
+  headerTitle: {
     fontSize: 18,
-    marginVertical: 10,
-    textAlign: "center",
-    textTransform: "uppercase",
+    fontFamily: 'Inter-SemiBold',
+    textAlign: 'center',
+    flex: 1,
+    marginLeft: -40,
+    color: '#333',
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   calendar: {
-    marginBottom: 20,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  timeContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginBottom: 20,
+  timeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 10,
   },
-  timeButton: {
-    padding: 5,
+  timeSlot: {
+    width: '30%',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    margin: 5,
-    minWidth: 80,
+    borderColor: '#DDD',
   },
-  selectedTime: {
-    backgroundColor: "#FFA500",
+  selectedTimeSlot: {
+    backgroundColor: '#FFA500',
+    borderColor: '#FFA500',
   },
   timeText: {
-    fontSize: 16,
-    color: "#666",
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#666',
   },
   selectedTimeText: {
-    color: "#fff",
+    color: '#FFF',
+    fontFamily: 'Inter-SemiBold',
   },
-  continueButton: {
-    backgroundColor: "#FFA500",
+  inputGroup: {
+    position: 'relative',
+    zIndex: 1,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 14,
+    color: '#333',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  inputText: {
+    fontFamily: 'Inter-Regular',
+  },
+  customInput: {
+    marginTop: 12,
+  },
+  dropdownIcon: {
+    marginLeft: 8,
+  },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    width: '100%',
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    backgroundColor: '#FFF',
+    marginTop: 4,
+    elevation: 3,
+    zIndex: 10,
+  },
+  dropdownScroll: {
+    maxHeight: 196,
+  },
+  dropdownItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  selectedDropdownItem: {
+    backgroundColor: '#FFF9E6',
+  },
+  dropdownItemText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: '#333',
+  },
+  submitButton: {
+    backgroundColor: '#FFA500',
     padding: 16,
     borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+    color: '#FFF',
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Dimmed background
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
-    width: 300,
-    padding: 20,
-    backgroundColor: "white",
-    borderRadius: 10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    width: '80%',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalIcon: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 8,
+    color: '#333',
+    textAlign: 'center',
   },
   modalText: {
-    fontSize: 18,
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#666',
+    textAlign: 'center',
     marginBottom: 20,
+    lineHeight: 20,
   },
   modalButton: {
-    backgroundColor: "#FFA500",
-    padding: 10,
+    backgroundColor: '#FFA500',
+    padding: 14,
     borderRadius: 8,
-    alignItems: "center",
-  },
-
-  textArea: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 120,
-    marginBottom: 10,
-  },
-   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 10,
-    // paddingTop: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  headerButton: {
-    padding: 8,
-  },
-  mainHeader: {
-    fontSize: 17,
-    fontWeight: "bold",
-    textAlign: "center",
-    flex: 1,
-    marginLeft: -50
+    width: '100%',
+    alignItems: 'center',
   },
 });
 
