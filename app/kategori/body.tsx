@@ -6,14 +6,17 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  SafeAreaView,
+  Dimensions,
 } from "react-native";
-import { useNavigation } from '@react-navigation/native'; // Importing the navigation hook from react-navigation
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Import the icon library
+import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-// Use the same image for all treatments
-const bodyCareImage = require('@/assets/images/body.jpg'); // Use the same image for all treatments
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 40) / 2; // Calculate card width based on screen width
 
-// Data produk perawatan tubuh
+const bodyCareImage = require('@/assets/images/body.jpg');
+
 const bodyTreatments = [
   {
     id: 1,
@@ -67,9 +70,8 @@ const bodyTreatments = [
 
 const TreatmentCard = ({ treatment }) => {
   return (
-    <TouchableOpacity style={styles.cardContainer}>
-      <View style={styles.card}>
-        {/* Badge Rating */}
+    <View style={styles.cardContainer}>
+      <TouchableOpacity style={styles.card} activeOpacity={0.9}>
         <View style={styles.ratingBadge}>
           <Text style={styles.ratingText}>{treatment.rating}</Text>
           <Text style={styles.ratingIcon}>★</Text>
@@ -78,87 +80,101 @@ const TreatmentCard = ({ treatment }) => {
         <Image source={treatment.image} style={styles.productImage} />
 
         <View style={styles.productInfo}>
-          <Text style={styles.productName}>{treatment.name}</Text>
+          <Text style={styles.productName} numberOfLines={1}>{treatment.name}</Text>
 
           <View style={styles.priceContainer}>
             <Text style={styles.productPrice}>
               Rp {treatment.price.toLocaleString()}
             </Text>
-            <Text style={styles.durationText}>{treatment.duration}</Text>
           </View>
 
           <Text style={styles.productDesc} numberOfLines={2}>
             {treatment.description}
           </Text>
 
-          {/* Book Button */}
-          <TouchableOpacity style={styles.bookButton}>
-            <Text style={styles.bookButtonText}>buy</Text>
+          <TouchableOpacity style={styles.bookButton} activeOpacity={0.8}>
+            <Text style={styles.bookButtonText}>Beli</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-const BodyTreatmentsScreen = () => {
-  const navigation = useNavigation(); // Get navigation instance
-
-  return (
-    <View style={styles.container}>
-      {/* Fixed Header Section */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#FFA500" /> {/* Back icon */}
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Perawatan Tubuh</Text>
-      </View>
-
-      <Text style={styles.subTitle}>Pilih perawatan terbaik untuk tubuh Anda</Text>
-
-      {/* Scrollable Card Section */}
-      <FlatList
-        data={bodyTreatments}
-        renderItem={({ item }) => <TreatmentCard treatment={item} />}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={2} // Display 2 cards in a row
-        contentContainerStyle={styles.listContent}
-      />
+      </TouchableOpacity>
     </View>
   );
 };
 
-// Styles
+const BodyTreatmentsScreen = () => {
+  const navigation = useNavigation();
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Fixed Header with Border Bottom */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Icon name="arrow-back" size={24} color="#FFA500" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Perawatan Tubuh</Text>
+        <View style={styles.backButton} /> {/* For balance */}
+      </View>
+
+      <Text style={styles.subTitle}>Pilih perawatan terbaik untuk tubuh Anda</Text>
+
+      {/* Scrollable Treatment List */}
+      <FlatList
+        data={bodyTreatments}
+        renderItem={({ item }) => <TreatmentCard treatment={item} />}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
+  );
+};
+
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: "#FFF",
-    padding: 16,
+  },
+  container: {
+    flex: 1,
   },
   headerContainer: {
-    flexDirection: "row", // Make header a flex container
-    alignItems: "center", // Center items vertically
-    marginBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
+    marginBottom: 12,
   },
   backButton: {
-    marginRight: 10,
+    width: 24,
   },
   headerTitle: {
     fontSize: 22,
     fontFamily: "Inter-Bold",
     color: "#333",
-    flex: 1, // Allow title to take remaining space
     textAlign: "center",
+    flex: 1,
   },
   subTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "Inter-Regular",
     color: "#666",
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: "center",
+    paddingHorizontal: 20,
   },
   cardContainer: {
-    flex: 1,
+    width: CARD_WIDTH,
     padding: 8,
   },
   card: {
@@ -170,12 +186,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    position: "relative",
-    height: 280, // Fixed height
+    height: 300,
   },
   productImage: {
     width: "100%",
-    height: 120,
+    height: 140,
     resizeMode: "cover",
   },
   productInfo: {
@@ -187,12 +202,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter-SemiBold",
     color: "#333",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   priceContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 8,
   },
   productPrice: {
@@ -200,20 +212,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inter-Bold",
     color: "#FF6B6B",
   },
-  durationText: {
-    fontSize: 12,
-    fontFamily: "Inter-Regular",
-    color: "#888",
-  },
   productDesc: {
     fontSize: 12,
     fontFamily: "Inter-Regular",
     color: "#666",
     lineHeight: 16,
-    marginBottom: 12,
+    marginBottom: 16,
+    height: 32,
   },
   listContent: {
     paddingBottom: 20,
+    paddingHorizontal: 8,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
   },
   ratingBadge: {
     position: "absolute",

@@ -6,15 +6,17 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  ScrollView,
+  SafeAreaView,
+  Dimensions,
 } from "react-native";
-import { useNavigation } from '@react-navigation/native'; // Importing the navigation hook from react-navigation
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Import the icon library
+import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-// Import images
-const faceImage = require('@/assets/images/face.jpg'); // Use the same face image for all treatments
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 40) / 2; // Calculate card width based on screen width
 
-// Data produk klinik kecantikan
+const faceImage = require('@/assets/images/face.jpg');
+
 const beautyProducts = [
   {
     id: 1,
@@ -74,9 +76,8 @@ const beautyProducts = [
 
 const ProductCard = ({ product }) => {
   return (
-    <TouchableOpacity style={styles.cardContainer}>
-      <View style={styles.card}>
-        {/* Badge Rating */}
+    <View style={styles.cardContainer}>
+      <TouchableOpacity style={styles.card} activeOpacity={0.9}>
         <View style={styles.ratingBadge}>
           <Text style={styles.ratingText}>{product.rating}</Text>
           <Text style={styles.ratingIcon}>★</Text>
@@ -85,7 +86,7 @@ const ProductCard = ({ product }) => {
         <Image source={product.image} style={styles.productImage} />
 
         <View style={styles.productInfo}>
-          <Text style={styles.productName}>{product.name}</Text>
+          <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
 
           <View style={styles.priceContainer}>
             <Text style={styles.productPrice}>
@@ -98,75 +99,88 @@ const ProductCard = ({ product }) => {
             {product.description}
           </Text>
 
-          {/* Book Button */}
-          <TouchableOpacity style={styles.bookButton}>
+          <TouchableOpacity style={styles.bookButton} activeOpacity={0.8}>
             <Text style={styles.bookButtonText}>Buy</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const BeautyProductsScreen = () => {
-  const navigation = useNavigation(); // Get navigation instance
+  const navigation = useNavigation();
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header with Back Button */}
+    <SafeAreaView style={styles.safeArea}>
+      {/* Fixed Header Section */}
       <View style={styles.headerContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#FFA500" /> {/* Back icon */}
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Icon name="arrow-back" size={24} color="#FFA500" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Perawatan Kecantikan</Text>
+        <View style={styles.backButton} /> {/* For balance */}
       </View>
 
       <Text style={styles.subTitle}>Pilih perawatan terbaik untuk kulit Anda</Text>
 
+      {/* Scrollable Content Section */}
       <FlatList
         data={beautyProducts}
         renderItem={({ item }) => <ProductCard product={item} />}
         keyExtractor={(item) => item.id.toString()}
-        numColumns={2} // Display 2 cards in a row
-        scrollEnabled={false}
-        columnWrapperStyle={styles.row}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
       />
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: "#FFF",
-    padding: 16,
-    paddingTop: 48, // Increased top padding
+  },
+  container: {
+    flex: 1,
   },
   headerContainer: {
-    flexDirection: "row", // Make header a flex container
-    alignItems: "center", // Center items vertically
-    marginBottom: 16, // Space below header
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
   },
   backButton: {
-    marginRight: 10, // Space between back button and title
+    width: 24,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: "Inter-Bold",
     color: "#333",
-    flex: 1, // Allow title to take remaining space
     textAlign: "center",
+    flex: 1,
   },
   subTitle: {
     fontSize: 14,
     fontFamily: "Inter-Regular",
     color: "#666",
-    marginBottom: 20,
-    textAlign: "center", // Center aligned
+    marginVertical: 12,
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
   cardContainer: {
-    flex: 1,
+    width: CARD_WIDTH,
     padding: 8,
   },
   card: {
@@ -178,12 +192,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    position: "relative",
-    height: 280, // Fixed height
+    height: 300,
   },
   productImage: {
     width: "100%",
-    height: 120,
+    height: 140,
     resizeMode: "cover",
   },
   productInfo: {
@@ -195,7 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter-SemiBold",
     color: "#333",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   priceContainer: {
     flexDirection: "row",
@@ -218,13 +231,16 @@ const styles = StyleSheet.create({
     fontFamily: "Inter-Regular",
     color: "#666",
     lineHeight: 16,
-    marginBottom: 12,
+    marginBottom: 16,
+    height: 32,
   },
-  row: {
-    justifyContent: "space-between",
+  columnWrapper: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
   },
   listContent: {
     paddingBottom: 20,
+    paddingTop: 8,
   },
   ratingBadge: {
     position: "absolute",

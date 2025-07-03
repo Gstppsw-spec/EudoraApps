@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -15,9 +15,11 @@ import {
   ScrollView,
   ActivityIndicator,
   Pressable,
+  Modal,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 export default function Register() {
   const router = useRouter();
@@ -30,43 +32,43 @@ export default function Register() {
     idNumber: "",
     birthDate: "",
     clinicLocation: "",
-    infoSource: "Rekomendasi",
+    referralCode: "",
   });
 
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showClinicDropdown, setShowClinicDropdown] = useState(false);
-  const [showInfoSourceDropdown, setShowInfoSourceDropdown] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isClinicModalVisible, setClinicModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const clinicOptions = [
     "Eudora Aesthetic Clinic - Bintaro",
     "Eudora Aesthetic Clinic - SMS",
     "Eudora Aesthetic Clinic - Central Park Mall",
     "Eudora Aesthetic Clinic - Kemang",
-  ];
-
-  const infoSourceOptions = [
-    "Rekomendasi",
-    "GUN",
-    "Media Sosial",
-    "Iklan",
-    "Lainnya",
+     "Eudora Aesthetic Clinic -  Living World Grand Wisata",
+      "Eudora Aesthetic Clinic - Living World Kota Wisata",
   ];
 
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDateChange = (event: any, selectedDate: Date | undefined) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      const day = selectedDate.getDate().toString().padStart(2, "0");
-      const month = (selectedDate.getMonth() + 1).toString().padStart(2, "0");
-      const year = selectedDate.getFullYear();
-      handleChange("birthDate", `${day}/${month}/${year}`);
-    }
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
+  };
+
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
+  };
+
+  const handleConfirm = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    handleChange("birthDate", `${day}/${month}/${year}`);
+    hideDatePicker();
   };
 
   const sendOtp = async () => {
@@ -80,14 +82,11 @@ export default function Register() {
           lastname: formData.lastname,
         },
         {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
 
-      if (response.data.status) { console.log(response.data);
-      
+      if (response.data.status) {
         Alert.alert("Success", "OTP telah dikirim.");
         setStep(2);
       } else {
@@ -110,25 +109,27 @@ export default function Register() {
           otp: otp,
         },
         {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
 
-     if (response.data.status) {
-      Alert.alert("Berhasil", "OTP berhasil diverifikasi.");
-router.replace("/authentication/setPin");
-       } else {
-      Alert.alert("Error", "OTP salah atau kadaluarsa");
+      if (response.data.status) {
+        Alert.alert("Berhasil", "OTP berhasil diverifikasi.");
+        router.replace("/authentication/setPin");
+      } else {
+        Alert.alert("Error", "OTP salah atau kadaluarsa");
+      }
+    } catch (err: any) {
+      Alert.alert("Error", err?.response?.data?.message || "Gagal verifikasi OTP");
+    } finally {
+      setLoading(false);
     }
-  } catch (err: any) {
-    // Handle errors gracefully
-    Alert.alert("Error", err?.response?.data?.message || "Gagal verifikasi OTP");
-  } finally {
-    setLoading(false); // Hide loading indicator
-  }
-};
+  };
+
+  // Filter clinics based on search query
+  const filteredClinics = clinicOptions.filter(clinic =>
+    clinic.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <KeyboardAvoidingView
@@ -138,158 +139,175 @@ router.replace("/authentication/setPin");
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                <Ionicons name="arrow-back" size={24} color="#1e293b" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Registrasi</Text>
-              <View style={{ width: 24 }} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nama Depan</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.firstname}
+                onChangeText={(text) => handleChange("firstname", text)}
+              />
             </View>
 
-            {step === 1 ? (
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionHeader}>Data Pribadi</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nama Belakang</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.lastname}
+                onChangeText={(text) => handleChange("lastname", text)}
+              />
+            </View>
 
-                {/* Semua input field satu per satu ke bawah */}
-                {[
-                  { label: "Nama Depan", key: "firstname", placeholder: "Nama depan" },
-                  { label: "Nama Belakang", key: "lastname", placeholder: "Nama belakang" },
-                  { label: "Nomor WhatsApp", key: "phone", placeholder: "08XXXXXXXXXX", keyboardType: "phone-pad" },
-                  { label: "Email", key: "email", placeholder: "email@contoh.com", keyboardType: "email-address" },
-                  { label: "Nomor KTP", key: "idNumber", placeholder: "Nomor KTP", keyboardType: "number-pad" },
-                ].map((item) => (
-                  <View style={styles.inputGroup} key={item.key}>
-                    <Text style={styles.label}>{item.label}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder={item.placeholder}
-                      keyboardType={item.keyboardType || "default"}
-                      value={formData[item.key]}
-                      onChangeText={(text) => handleChange(item.key, text)}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.phone}
+                onChangeText={(text) => handleChange("phone", text)}
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.email}
+                onChangeText={(text) => handleChange("email", text)}
+                keyboardType="email-address"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nomor KTP</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.idNumber}
+                onChangeText={(text) => handleChange("idNumber", text)}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Tanggal Lahir</Text>
+              <Pressable
+                style={styles.dropdownContainer}
+                onPress={showDatePicker}
+              >
+                <Text style={formData.birthDate ? styles.text : styles.placeholderText}>
+                  {formData.birthDate || "dd/mm/yyyy"}
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#64748b" />
+              </Pressable>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Lokasi Klinik</Text>
+              <Pressable
+                style={styles.dropdownContainer}
+                onPress={() => setClinicModalVisible(true)} // Open the modal
+              >
+                <Text style={styles.text}>
+                  {formData.clinicLocation || "Pilih Klinik Terdekat"}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#64748b" />
+              </Pressable>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Jenis Kelamin</Text>
+              <View style={styles.radioRow}>
+                {["FEMALE", "MALE"].map((gender) => (
+                  <TouchableOpacity
+                    key={gender}
+                    style={styles.radioOption}
+                    onPress={() => handleChange("gender", gender)}
+                  >
+                    <View
+                      style={[
+                        styles.radioCircle,
+                        formData.gender === gender && styles.radioCircleSelected,
+                      ]}
                     />
-                  </View>
+                    <Text style={styles.radioLabel}>{gender}</Text>
+                  </TouchableOpacity>
                 ))}
+              </View>
+            </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Tanggal Lahir</Text>
-                  <Pressable style={styles.input} onPress={() => setShowDatePicker(true)}>
-                    <Text style={formData.birthDate ? styles.dateText : styles.placeholderText}>
-                      {formData.birthDate || "dd/mm/yyyy"}
-                    </Text>
-                  </Pressable>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={new Date()}
-                      mode="date"
-                      display="default"
-                      onChange={handleDateChange}
-                    />
-                  )}
-                </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Kode Referal</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.referralCode}
+                onChangeText={(text) => handleChange("referralCode", text)}
+                placeholder="Masukkan kode referal (jika ada)"
+              />
+            </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Jenis Kelamin</Text>
-                  <View style={styles.radioGroup}>
-                    {["FEMALE", "MALE"].map((gender) => (
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={sendOtp}
+              disabled={loading || !formData.phone || !formData.firstname}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Kirim OTP</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Calendar Modal */}
+            <DateTimePickerModal
+              isVisible={isDatePickerVisible}
+              mode="date"
+              date={new Date()}
+              onConfirm={handleConfirm}
+              onCancel={hideDatePicker}
+              backdropStyle={styles.backdrop}
+            />
+
+            {/* Modal for Clinic Selection */}
+            <Modal
+              transparent={true}
+              animationType="slide"
+              visible={isClinicModalVisible}
+              onRequestClose={() => setClinicModalVisible(false)}
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.headerText}>Pilih Klinik</Text>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Cari Klinik"
+                    onChangeText={(text) => setSearchQuery(text)}
+                    value={searchQuery}
+                  />
+
+                  <FlatList
+                    data={filteredClinics}
+                    keyExtractor={(item) => item}
+                    renderItem={({ item }) => (
                       <TouchableOpacity
-                        key={gender}
-                        style={[
-                          styles.radioButton,
-                          formData.gender === gender && styles.radioButtonActive,
-                        ]}
-                        onPress={() => handleChange("gender", gender)}
+                        style={styles.modalItem}
+                        onPress={() => {
+                          handleChange("clinicLocation", item);
+                          setClinicModalVisible(false);
+                        }}
                       >
-                        <Text
-                          style={[
-                            styles.radioText,
-                            formData.gender === gender && styles.radioTextActive,
-                          ]}
-                        >
-                          {gender === "FEMALE" ? "Perempuan" : "Laki-laki"}
-                        </Text>
+                        <Text>{item}</Text>
                       </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
+                    )}
+                  />
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Lokasi Klinik</Text>
-                  <Pressable style={styles.input} onPress={() => setShowClinicDropdown(!showClinicDropdown)}>
-                    <Text>{formData.clinicLocation || "Pilih Klinik Terdekat"}</Text>
-                  </Pressable>
-                  {showClinicDropdown && (
-                    <View style={styles.dropdown}>
-                      {clinicOptions.map((option, index) => (
-                        <Pressable
-                          key={index}  
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            handleChange("clinicLocation", option);
-                            setShowClinicDropdown(false);
-                          }}
-                        >
-                          <Text>{option}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setClinicModalVisible(false)}
+                  >
+                    <Text style={styles.closeButtonText}>Tutup</Text>
+                  </TouchableOpacity>
                 </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Sumber Informasi</Text>
-                  <Pressable style={styles.input} onPress={() => setShowInfoSourceDropdown(!showInfoSourceDropdown)}>
-                    <Text>{formData.infoSource}</Text>
-                  </Pressable>
-                  {showInfoSourceDropdown && (
-                    <View style={styles.dropdown}>
-                      {infoSourceOptions.map((source, index) => (
-                        <Pressable
-                          key={index}
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            handleChange("infoSource", source);
-                            setShowInfoSourceDropdown(false);
-                          }}
-                        >
-                          <Text>{source}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                <TouchableOpacity
-                  style={styles.submitButton}
-                  onPress={sendOtp}
-                  disabled={loading || !formData.phone || !formData.firstname}
-                >
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Kirim OTP</Text>}
-                </TouchableOpacity>
               </View>
-            ) : (
-              <View style={styles.otpContainer}>
-                <Text style={styles.otpTitle}>Masukkan Kode OTP</Text>
-                <Text style={styles.otpSubtitle}>Kode OTP telah dikirim ke {formData.phone}</Text>
-                <TextInput
-                  style={styles.otpInput}
-                  placeholder="••••••"
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  value={otp}
-                  onChangeText={setOtp}
-                />
-                <TouchableOpacity
-                  style={styles.submitButton}
-                  onPress={verifyOtp}
-                  disabled={loading || otp.length < 6}
-                >
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verifikasi OTP</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.resendLink} onPress={sendOtp}>
-                  <Text style={styles.resendText}>Tidak menerima kode? Kirim ulang</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            </Modal>
           </View>
         </TouchableWithoutFeedback>
       </ScrollView>
@@ -299,67 +317,90 @@ router.replace("/authentication/setPin");
 
 const styles = StyleSheet.create({
   scrollContainer: { flexGrow: 1, paddingBottom: 40 },
-  container: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: 20 },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
-    marginTop: Platform.OS === "ios" ? 48 : 24,
-  },
-  backButton: { padding: 8 },
-  headerTitle: { fontSize: 20, fontWeight: "700", color: "#1e293b", flex: 1, textAlign: "center" },
-  sectionContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  sectionHeader: { fontSize: 16, fontWeight: "700", color: "#1e293b", marginBottom: 16 },
+  container: { flex: 1, paddingHorizontal: 20, paddingTop: 40 },
   inputGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: "600", color: "#475569", marginBottom: 8 },
   input: {
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    paddingVertical: 12,
     fontSize: 14,
     color: "#1e293b",
   },
   placeholderText: { color: "#9ca3af" },
-  dateText: { color: "#1e293b" },
-  radioGroup: { flexDirection: "row", gap: 12 },
-  radioButton: {
-    flex: 1,
-    padding: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
+  text: { color: "#1e293b", fontSize: 14 },
+  dropdownContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-  },
-  radioButtonActive: { backgroundColor: "#FEBA43", borderColor: "#FEBA43" },
-  radioText: { color: "#64748b", fontWeight: "500", fontSize: 14 },
-  radioTextActive: { color: "#fff", fontWeight: "600" },
-  dropdown: {
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    backgroundColor: "#fff",
-    maxHeight: 200,
-  },
-  dropdownItem: {
-    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
+    borderBottomColor: "#e2e8f0",
+    paddingVertical: 12,
   },
+  backdrop: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%', // Width of the modal
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    elevation: 5, // Optional shadow for Android
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  headerText: {
+    fontSize: 18,
+    marginBottom: 10,
+    fontWeight: 'bold',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    width: '100%',
+  },
+  modalItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  closeButton: {
+    backgroundColor: '#FEBA43',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  radioRow: { flexDirection: "row", gap: 16, alignItems: "center" },
+  radioOption: { flexDirection: "row", alignItems: "center" },
+  radioCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: "#FEBA43",
+    marginRight: 6,
+  },
+  radioCircleSelected: {
+    backgroundColor: "#FEBA43",
+  },
+  radioLabel: { fontSize: 14, color: "#1e293b" },
   submitButton: {
     backgroundColor: "#FEBA43",
     borderRadius: 8,
@@ -369,33 +410,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  otpContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 24,
-    marginTop: 40,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  otpTitle: { fontSize: 18, fontWeight: "700", color: "#1e293b", marginBottom: 8 },
-  otpSubtitle: { fontSize: 14, color: "#64748b", marginBottom: 24, textAlign: "center" },
-  otpInput: {
-    width: "100%",
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 18,
-    color: "#1e293b",
-    letterSpacing: 8,
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  resendLink: { marginTop: 16 },
-  resendText: { color: "#FEBA43", fontWeight: "600", textAlign: "center", fontSize: 14 },
 });

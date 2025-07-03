@@ -12,7 +12,6 @@ import {
   KeyboardAvoidingView,
   Pressable
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
@@ -24,8 +23,8 @@ const BookingAppointmentScreen = () => {
   const [selectedTreatment, setSelectedTreatment] = useState('');
   const [customTreatment, setCustomTreatment] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showTreatmentDropdown, setShowTreatmentDropdown] = useState(false);
-  
+  const [showTreatmentModal, setShowTreatmentModal] = useState(false);
+
   const TREATMENT_OPTIONS = [
     { label: 'Pilih Treatment', value: '' },
     { label: 'Facial Treatment', value: 'facial' },
@@ -63,6 +62,10 @@ const BookingAppointmentScreen = () => {
     const selected = TREATMENT_OPTIONS.find(opt => opt.value === selectedTreatment);
     return selected ? selected.label : "Pilih Treatment";
   };
+
+  // Check if all required fields are filled
+  const isSubmitEnabled = selectedDate && selectedTime && selectedTreatment && 
+      (selectedTreatment !== 'other' || customTreatment);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -138,67 +141,70 @@ const BookingAppointmentScreen = () => {
           {/* Treatment Selection */}
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>PILIH TREATMENT</Text>
-            <View style={styles.inputGroup}>
-              <Pressable 
-                style={styles.input} 
-                onPress={() => setShowTreatmentDropdown(!showTreatmentDropdown)}
-              >
-                <Text style={styles.inputText}>{getSelectedTreatmentLabel()}</Text>
-                <Ionicons 
-                  name={showTreatmentDropdown ? "chevron-up" : "chevron-down"} 
-                  size={20} 
-                  color="#666" 
-                  style={styles.dropdownIcon}
-                />
-              </Pressable>
-              
-              {showTreatmentDropdown && (
-                <View style={styles.dropdown}>
-                  <ScrollView style={styles.dropdownScroll}>
-                    {TREATMENT_OPTIONS.map((option, index) => (
-                      <Pressable
-                        key={index}
-                        style={[
-                          styles.dropdownItem,
-                          selectedTreatment === option.value && styles.selectedDropdownItem
-                        ]}
-                        onPress={() => {
-                          setSelectedTreatment(option.value);
-                          setShowTreatmentDropdown(false);
-                          if (option.value !== 'other') {
-                            setCustomTreatment('');
-                          }
-                        }}
-                      >
-                        <Text style={styles.dropdownItemText}>{option.label}</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-
-            {/* Custom Treatment Input */}
-            {selectedTreatment === 'other' && (
-              <TextInput
-                style={[styles.input, styles.customInput]}
-                placeholder="Tulis treatment Anda"
-                placeholderTextColor="#999"
-                value={customTreatment}
-                onChangeText={setCustomTreatment}
+            <Pressable 
+              style={styles.input} 
+              onPress={() => setShowTreatmentModal(true)}
+            >
+              <Text style={styles.inputText}>{getSelectedTreatmentLabel()}</Text>
+              <Ionicons 
+                name="chevron-down" 
+                size={20} 
+                color="#666" 
+                style={styles.dropdownIcon}
               />
-            )}
+            </Pressable>
           </View>
 
           {/* Submit Button */}
           <TouchableOpacity
-            style={styles.submitButton}
-            onPress={handleSubmit}
+            style={[styles.submitButton, { opacity: isSubmitEnabled ? 1 : 0.5 }]} 
+            onPress={isSubmitEnabled ? handleSubmit : null} 
+            disabled={!isSubmitEnabled} 
           >
             <Text style={styles.buttonText}>LANJUTKAN</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Treatment Selection Modal */}
+      <Modal
+        visible={showTreatmentModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTreatmentModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.treatmentModalContent}>
+            <Text style={styles.treatmentModalTitle}>Pilih Treatment</Text>
+            <ScrollView>
+              {TREATMENT_OPTIONS.map((option, index) => (
+                <Pressable
+                  key={index}
+                  style={[
+                    styles.treatmentItem,
+                    selectedTreatment === option.value && styles.selectedDropdownItem
+                  ]}
+                  onPress={() => {
+                    setSelectedTreatment(option.value);
+                    setShowTreatmentModal(false);
+                    if (option.value !== 'other') {
+                      setCustomTreatment('');
+                    }
+                  }}
+                >
+                  <Text style={styles.treatmentItemText}>{option.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <TouchableOpacity 
+              style={styles.modalCloseButton} 
+              onPress={() => setShowTreatmentModal(false)}
+            >
+              <Text style={styles.buttonText}>Tutup</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Success Modal */}
       <Modal
@@ -278,7 +284,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 10,
   },
   timeSlot: {
     width: '30%',
@@ -321,40 +326,8 @@ const styles = StyleSheet.create({
   inputText: {
     fontFamily: 'Inter-Regular',
   },
-  customInput: {
-    marginTop: 12,
-  },
   dropdownIcon: {
     marginLeft: 8,
-  },
-  dropdown: {
-    position: 'absolute',
-    top: '100%',
-    width: '100%',
-    maxHeight: 200,
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    backgroundColor: '#FFF',
-    marginTop: 4,
-    elevation: 3,
-    zIndex: 10,
-  },
-  dropdownScroll: {
-    maxHeight: 196,
-  },
-  dropdownItem: {
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
-  },
-  selectedDropdownItem: {
-    backgroundColor: '#FFF9E6',
-  },
-  dropdownItemText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#333',
   },
   submitButton: {
     backgroundColor: '#FFA500',
@@ -406,6 +379,40 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: '100%',
     alignItems: 'center',
+  },
+  treatmentModalContent: {
+    width: '80%',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+  },
+  treatmentModalTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 12,
+    color: '#333',
+    textAlign: 'center',
+  },
+  treatmentItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  selectedDropdownItem: {
+    backgroundColor: '#FFF9E6',
+  },
+  treatmentItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalCloseButton: {
+    backgroundColor: '#FFA500',
+    padding: 10,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 12,
   },
 });
 

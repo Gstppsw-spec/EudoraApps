@@ -5,158 +5,300 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  ScrollView,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Importing Material icons
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-// Sample data for featured categories with icons
-const featuredCategories = [
+// Complete clinic categories data
+const clinicCategories = [
   {
     id: 1,
-    name: 'Kecantikan',
-    icon: 'face', // Material icon name
+    name: 'Facial Treatment',
+    icon: 'face',
   },
   {
     id: 2,
-    name: 'Mainan & Hobi',
-    icon: 'toys', // Material icon name
+    name: 'Skin Care',
+    icon: 'spa',
   },
   {
     id: 3,
-    name: 'Ibu & Bayi',
-    icon: 'child-care', // Material icon name
+    name: 'Hair Removal',
+    icon: 'content-cut',
   },
   {
     id: 4,
-    name: 'Promo',
-    icon: 'star', // Material icon name
+    name: 'Body Treatment',
+    icon: 'bathtub',
   },
   {
     id: 5,
-    name: 'GoPay Pinjam',
-    icon: 'attach-money', // Material icon name
+    name: 'Nail Care',
+    icon: 'brush',
   },
   {
     id: 6,
-    name: 'Pulsa',
-    icon: 'phonelink', // Material icon name
+    name: 'Makeup',
+    icon: 'colorize',
   },
   {
     id: 7,
-    name: 'Tokopedia Card',
-    icon: 'credit-card', // Material icon name
+    name: 'Hair Care',
+    icon: 'content-cut',
   },
   {
     id: 8,
-    name: 'Dilayani Tokopedia',
-    icon: 'room-service', // Material icon name
+    name: 'Eyelash',
+    icon: 'visibility',
   },
   {
     id: 9,
-    name: 'Tokopedia Farma',
-    icon: 'local-pharmacy', // Material icon name
+    name: 'Special Package',
+    icon: 'star',
   },
 ];
 
-const CategoryCard = ({ category }) => {
-  const navigation = useNavigation(); // Get navigation instance
+// Complete clinic services data
+const clinicServices = [
+  {
+    id: 1,
+    name: 'Facial Treatments',
+    description: 'Various facial treatments for all skin types'
+  },
+  {
+    id: 2,
+    name: 'Skin Rejuvenation',
+    description: 'Advanced treatments for youthful skin'
+  },
+  {
+    id: 3,
+    name: 'Body Treatments',
+    description: 'Full body massage and treatments'
+  },
+  {
+    id: 4,
+    name: 'Hair Services',
+    description: 'Hair care and styling services'
+  },
+  {
+    id: 5,
+    name: 'Nail Services',
+    description: 'Manicure and pedicure treatments'
+  },
+  {
+    id: 6,
+    name: 'Makeup Services',
+    description: 'Professional makeup application'
+  }
+];
 
+const CategoryCard = ({ category }) => {
   return (
-    <TouchableOpacity style={styles.card} onPress={() => {/* Handle navigation here */}}>
-      <Icon name={category.icon} size={40} color="#FFA500" />
+    <TouchableOpacity style={styles.card}>
+      <View style={styles.iconContainer}>
+        <Icon name={category.icon} size={30} color="#FFB900" />
+      </View>
       <Text style={styles.cardTitle}>{category.name}</Text>
     </TouchableOpacity>
   );
 };
 
-const MoreScreen = () => {
-  const navigation = useNavigation(); // Get navigation instance
-
+const ServiceItem = ({ service }) => {
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#FFA500" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Jelajah Tokopedia</Text>
+    <TouchableOpacity style={styles.serviceButton}>
+      <View>
+        <Text style={styles.serviceName}>{service.name}</Text>
+        <Text style={styles.serviceDescription}>{service.description}</Text>
       </View>
-
-      {/* Featured Categories */}
-      <Text style={styles.sectionTitle}>Featured</Text>
-      <FlatList
-        data={featuredCategories}
-        renderItem={({ item }) => <CategoryCard category={item} />}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={3}
-        contentContainerStyle={styles.listContent}
-      />
-
-      {/* Other Sections */}
-      {['Gadget & Elektronik', 'Fashion & Kecantikan', 'Kebutuhan Harian', 'Mainan & Hobi', 'Perlengkapan Rumah & Dekorasi', 'Tagihan'].map((section, index) => (
-        <View key={index}>
-          <Text style={styles.sectionTitle}>{section}</Text>
-          <TouchableOpacity style={styles.collapsibleSection}>
-            <Text style={styles.collapsibleText}>Check it out</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
-    </View>
+      <Icon name="chevron-right" size={20} color="#FFB900" />
+    </TouchableOpacity>
   );
 };
 
-// Styles
+const MoreScreen = () => {
+  const navigation = useNavigation();
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Fixed Header Section */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={24} color="#FFB900" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Beauty Clinic Services</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      {/* Scrollable Content Section */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Categories Grid */}
+        <Text style={styles.sectionTitle}>Treatment Categories</Text>
+        <FlatList
+          data={clinicCategories}
+          renderItem={({ item }) => <CategoryCard category={item} />}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={3}
+          scrollEnabled={false}
+          contentContainerStyle={styles.gridContainer}
+        />
+
+        {/* Services Sections */}
+        <Text style={styles.sectionTitle}>Our Services</Text>
+        {clinicServices.map((service) => (
+          <ServiceItem key={service.id} service={service} />
+        ))}
+
+        {/* Clinic Info */}
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>About Our Clinic</Text>
+          <Text style={styles.infoText}>
+            We provide premium beauty treatments with certified professionals using 
+            the latest technology and highest quality products.
+          </Text>
+          <View style={styles.contactItem}>
+            <Icon name="location-on" size={20} color="#FFB900" />
+            <Text style={styles.contactText}>123 Beauty Street, Jakarta</Text>
+          </View>
+          <View style={styles.contactItem}>
+            <Icon name="phone" size={20} color="#FFB900" />
+            <Text style={styles.contactText}>(021) 1234-5678</Text>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#FFF',
-    padding: 16,
   },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
+    color: '#000000', // Black color for the title
     textAlign: 'center',
+    flex: 1,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 30,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  gridContainer: {
+    paddingHorizontal: 8,
+    paddingBottom: 16,
   },
   card: {
     flex: 1,
     alignItems: 'center',
-    margin: 5,
-    padding: 10,
+    margin: 8,
+    padding: 12,
     borderRadius: 10,
-    backgroundColor: '#F6F6F6',
+    backgroundColor: '#FFF',
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  iconContainer: {
+    backgroundColor: '#FFF8E6',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   cardTitle: {
-    marginTop: 6,
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
     textAlign: 'center',
   },
-  listContent: {
-    paddingBottom: 20,
-  },
-  collapsibleSection: {
-    padding: 10,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 8,
-    marginVertical: 5,
+  serviceButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  collapsibleText: {
+  serviceName: {
     fontSize: 16,
-    color: '#555',
+    color: '#333',
+    fontWeight: '500',
+  },
+  serviceDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  infoCard: {
+    margin: 16,
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFB900',
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  contactText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 10,
   },
 });
 
