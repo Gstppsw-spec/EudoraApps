@@ -20,7 +20,7 @@ const SplashScreen = () => {
     const timer = setTimeout(() => {
       if (!navigated) { // Only navigate if we haven't done so already
         setNavigated(true); // Set navigated to true
-        router.push('/authentication/otpWhatsapp'); // Navigate to otpWhatsapp
+        router.push('/authentication/onboarding'); // Navigate to otpWhatsapp
       }
     }, 5000); // 5 seconds delay
 
