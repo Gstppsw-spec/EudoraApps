@@ -17,7 +17,7 @@ export default function Index() {
       // return () => clearTimeout(timeout);
     // } else if (customerId && !hasPin) {
       const timeout = setTimeout(() => {
-        router.push("/authentication/LoadingScreen");
+        router.push("/tabs/home");
       }, 100);
       return () => clearTimeout(timeout);
     // } else if (!customerId && !hasPin) {

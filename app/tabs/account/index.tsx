@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   Image,
   ScrollView,
@@ -8,6 +8,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import useStore from "../../../store/useStore";
@@ -16,8 +18,10 @@ const MyAccountScreen = () => {
   const router = useRouter();
   const setCustomerId = useStore((state) => state.setCustomerId);
   const setHasPin = useStore((state) => state.setHasPin);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogOut = () => {
+    setShowLogoutModal(false);
     setCustomerId(null);
     setHasPin(false);
     router.replace("/authentication/otpWhatsapp");
@@ -84,40 +88,75 @@ const MyAccountScreen = () => {
           <Text style={styles.sectionTitle}>About</Text>
 
           <View style={styles.sectionItem}>
-            <Link href="/help-center" asChild>
+            <Link href="/tabs/account/helpcenter" asChild>
               <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
                 <Text style={styles.menuText}>Help Center</Text>
                 <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
 
-            <Link href="/privacy-policy" asChild>
+            <Link href="/tabs/account/PrivacyPolicy" asChild>
               <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
                 <Text style={styles.menuText}>Privacy & Policy</Text>
                 <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
 
-            <Link href="/about-app" asChild>
+            <Link href="/tabs/account/about" asChild>
               <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
                 <Text style={styles.menuText}>About App</Text>
                 <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
 
-            <Link href="/terms-and-conditions" asChild>
-              <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                <Text style={styles.menuText}>Terms & Conditions</Text>
-                <MaterialIcons name="chevron-right" size={24} color="#999" />
-              </TouchableOpacity>
-            </Link>
+         
 
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={handleLogOut}>
-              <Text style={styles.menuText}>Logout</Text>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              activeOpacity={0.7} 
+              onPress={() => setShowLogoutModal(true)}
+            >
+              <Text style={[styles.menuText, { color: '#ff4444' }]}>Logout</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showLogoutModal}
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Logout Confirmation</Text>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.modalText}>Are you sure you want to logout?</Text>
+            </View>
+            
+            <View style={styles.modalFooter}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowLogoutModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              
+              <Pressable
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={handleLogOut}
+              >
+                <Text style={styles.confirmButtonText}>Logout</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -208,6 +247,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#999",
     marginLeft: 8,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#333',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalText: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+    lineHeight: 24,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    borderRightWidth: 1,
+    borderRightColor: '#f0f0f0',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  confirmButton: {
+    backgroundColor: '#f8f8f8',
+  },
+  confirmButtonText: {
+    color: '#ff4444',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
