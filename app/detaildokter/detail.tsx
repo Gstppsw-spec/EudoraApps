@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
 import { useLocalSearchParams, Link } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 const DoctorDetailScreen = () => {
   const { id } = useLocalSearchParams();
@@ -11,6 +11,9 @@ const DoctorDetailScreen = () => {
       name: "Dr. Valeria Saputra",
       role: "Dokter Estetika",
       image: require("@/assets/images/vanlencia.jpg"),
+      experience: "8 Tahun Pengalaman",
+      rating: "4.9",
+      reviews: "128",
       details: [
         "Aesthetic Practitioner: Botox, Filler, Skinbooster, Threadlift",
         "Laser & Energy-Based Device Treatments",
@@ -21,27 +24,26 @@ const DoctorDetailScreen = () => {
       name: "Dr. Dodi Saputra",
       role: "Dokter Estetika",
       image: require("@/assets/images/dodi.jpg"),
+      experience: "10 Tahun Pengalaman",
+      rating: "4.8",
+      reviews: "215",
       details: [
         "Medical Aesthetic Doctor | Trusted in Botox, Filler, Threadlift, Acne, & Anti-Aging",
         "Facial Rejuvenation (Laser, Chemical peels, Microneedling, Skinbooster)",
         "Facial Contouring (Thread lifting, HIFU, V-shape facial sculpting)",
-        "Acne & Acne Scar Management (Acne injections, Acne peels, PRP)",
-        "Body Shaping & Fat Reduction (Mesolipolysis)",
-        "Pigmentation & Skin Brightening (Melasma and dark spot treatment, Medical-grade skincare plans, Combination therapy)",
-        "Results that are safe, natural, and evidence-based",
       ],
     },
     3: {
       name: "Dr. Chindyra Nabila",
       role: "Dokter Estetika",
       image: require("@/assets/images/nabila.jpg"),
+      experience: "6 Tahun Pengalaman",
+      rating: "4.7",
+      reviews: "95",
       details: [
         "Certified in Advanced Aesthetic Procedures",
         "Aesthetic Practitioner: Botox, Filler, Skinbooster, Threadlift",
         "Laser & Energy-Based Device Treatments",
-        "Skin & Hair Rejuvenation (PRP, Microneedling, Acne Therapy)",
-        "Mesotherapy Face and Body",
-        "Aesthetic and Wellness Consultant",
       ],
     },
   };
@@ -50,27 +52,43 @@ const DoctorDetailScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerContainer}>
+      {/* Modern Header */}
+      <View style={styles.header}>
         <Link href="/tabs/clinic/details" asChild>
-          <TouchableOpacity style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFA500" />
-          </TouchableOpacity>
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </Link>
-        <Text style={styles.headerTitle}>Detail Dokter</Text>
+        <Text style={styles.headerTitle}>Doctor Profile</Text>
+        <View style={{ width: 24 }} /> {/* Spacer */}
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Doctor Profile Section */}
         <View style={styles.profileSection}>
-          <Image source={doctor.image} style={styles.doctorImage} />
+          <View style={styles.avatarContainer}>
+            <Image source={doctor.image} style={styles.avatar} />
+            <View style={styles.verifiedBadge}>
+              <MaterialIcons name="verified" size={20} color="#4CAF50" />
+            </View>
+          </View>
+          
           <Text style={styles.doctorName}>{doctor.name}</Text>
           <Text style={styles.doctorRole}>{doctor.role}</Text>
+          
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+            </View>
+            <View style={styles.statItem}>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.detailsSection}>
-          <Text style={styles.sectionTitle}>Keahlian</Text>
+        {/* Expertise Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="medical-services" size={24} color="#FF9800" />
+            <Text style={styles.sectionTitle}>Keahlian Spesialis</Text>
+          </View>
+          
           <View style={styles.detailsList}>
             {doctor.details.map((detail, index) => (
               <View key={index} style={styles.detailItem}>
@@ -79,8 +97,8 @@ const DoctorDetailScreen = () => {
               </View>
             ))}
           </View>
-        </View>
-        
+        </View> 
+
         {/* Spacer */}
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -91,65 +109,105 @@ const DoctorDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F7FA',
   },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 30,
-  },
-  headerContainer: {
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
     paddingTop: 50,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  backButton: {
-    marginRight: 16,
+    borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
   },
   profileSection: {
     alignItems: 'center',
-    paddingVertical: 32,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    marginBottom: 24,
+    padding: 24,
+    backgroundColor: 'white',
+    margin: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  doctorImage: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    marginBottom: 20,
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#FFE74C', // Changed to yellow
+    borderColor: '#E3F2FD',
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 4,
   },
   doctorName: {
     fontSize: 22,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: '700',
     color: '#333',
     marginBottom: 4,
+    textAlign: 'center',
   },
   doctorRole: {
     fontSize: 16,
-    textAlign: 'center',
     color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
   },
-  detailsSection: {
-    marginBottom: 24,
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    width: '100%',
+    marginTop: 8,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 12,
+  },
+  statText: {
+    fontSize: 14,
+    color: '#555',
+    marginLeft: 6,
+  },
+  section: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 16,
+    marginLeft: 8,
   },
   detailsList: {
     paddingLeft: 8,
@@ -163,7 +221,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FFE74C', // Changed to yellow
+    backgroundColor: '#FF9800', // Changed to orange
     marginTop: 8,
     marginRight: 12,
   },
@@ -172,6 +230,13 @@ const styles = StyleSheet.create({
     color: '#555',
     lineHeight: 22,
     flex: 1,
+  },
+  bookingInfo: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#333',
+    marginVertical: 20,
+    fontStyle: 'italic',
   },
 });
 
