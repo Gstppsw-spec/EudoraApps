@@ -16,20 +16,18 @@ const ClinicDetailScreen = () => {
   const clinicData = useLocalSearchParams();
   const router = useRouter();
 
-  const handleWhatsAppPress = (whatsappNumber: any) => {
-    const message = "Halo, saya ingin bertanya."; // isi pesan default
-    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-      message
-    )}`;
+  const handleWhatsAppPress = (whatsappNumber) => {
+    const message = "Halo, saya ingin bertanya.";
+    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
     Linking.openURL(url).catch((err) => {
-      console.error("Gagal membuka WhatsApp:", err);
+      console.error("Failed to open WhatsApp:", err);
     });
   };
 
-  const handleCallPress = (whatsappNumber: any) => {
+  const handleCallPress = (whatsappNumber) => {
     const telUrl = `tel:${whatsappNumber}`;
     Linking.openURL(telUrl).catch((err) =>
-      console.error("Gagal membuka aplikasi telepon:", err)
+      console.error("Failed to open phone app:", err)
     );
   };
 
@@ -37,22 +35,16 @@ const ClinicDetailScreen = () => {
     const address = clinicData.address || "Bintaro Jaya Exchange";
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     Linking.openURL(url).catch((err) =>
-      console.error("Gagal membuka Google Maps:", err)
+      console.error("Failed to open Google Maps:", err)
     );
   };
 
   const handleShare = async () => {
     try {
       const result = await Share.share({
-        message: `Cek klinik ${
-          clinicData.name || "EUDORA Clinic"
-        } di sini:\n\nAlamat: ${
-          clinicData.address || "Bintaro Jaya Exchange"
-        }\n\nGoogle Maps: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          clinicData.address || "Bintaro Jaya Exchange"
-        )}`,
+        message: `Cek klinik ${clinicData.name || "EUDORA Clinic"} di sini:\n\nAlamat: ${clinicData.address || "Bintaro Jaya Exchange"}\n\nGoogle Maps: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinicData.address || "Bintaro Jaya Exchange")}`,
       });
-      
+
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
           console.log("Shared with activity type:", result.activityType);
@@ -63,34 +55,33 @@ const ClinicDetailScreen = () => {
         console.log("Share dibatalkan.");
       }
     } catch (error) {
-      console.error("Gagal share:", error.message);
+      console.error("Failed to share:", error.message);
     }
   };
 
   const doctors = [
     {
       id: 1,
-      name: "A. Walker",
-      role: "Doctor",
-      image: require("@/assets/images/doc.png"),
+      name: "Dr. Valeria Saputra",
+      role: "Dokter Estetika",
+      image: require("@/assets/images/vanlencia.jpg"),
     },
     {
       id: 2,
-      name: "N. Patel",
-      role: "Doctor",
-      image: require("@/assets/images/doc.png"),
+      name: "Dr. Dodi Saputra",
+      role: "Dokter Estetika",
+      image: require("@/assets/images/dodi.jpg"),
     },
     {
       id: 3,
-      name: "B. Cruz",
-      role: "Doctor",
-      image: require("@/assets/images/doc.png"),
+      name: "Dr. Chindyra Nabila",
+      role: "Dokter Estetika",
+      image: require("@/assets/images/nabila.jpg"),
     },
   ];
 
   return (
     <View style={styles.container}>
-      {/* Back Button */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
@@ -107,9 +98,7 @@ const ClinicDetailScreen = () => {
             />
           ) : (
             <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>
-                Clinic Image Unavailable
-              </Text>
+              <Text style={styles.placeholderText}>Clinic Image Unavailable</Text>
             </View>
           )}
 
@@ -118,84 +107,44 @@ const ClinicDetailScreen = () => {
               <Text style={styles.clinicName}>
                 {clinicData.name || "EUDORA Bintaro Exchange"}
               </Text>
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                }}
-              >
-                <FontAwesome
-                  style={{ marginRight: 13 }}
-                  name="map-marker"
-                  size={20}
-                  color="#FFB900"
-                />
-                <Text
-                  style={styles.clinicAddress}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
+              <View style={{ display: "flex", flexDirection: "row", alignItems: "center" }}>
+                <FontAwesome style={{ marginRight: 13 }} name="map-marker" size={20} color="#FFB900" />
+                <Text style={styles.clinicAddress} numberOfLines={1} ellipsizeMode="tail">
                   {clinicData.address || "Bintaro Jaya Exchange"}
                 </Text>
               </View>
 
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                }}
-              >
-                <FontAwesome
-                  style={{ marginRight: 10 }}
-                  name="star"
-                  size={15}
-                  color="#FFB900"
-                />
+              <View style={{ display: "flex", flexDirection: "row", alignItems: "center" }}>
+                <FontAwesome style={{ marginRight: 10 }} name="star" size={15} color="#FFB900" />
                 <Text style={styles.rating}>
-                  {clinicData.rating || "4.8"} ({clinicData.reviews || "3,279"}{" "}
-                  reviews)
+                  {clinicData.rating || "4.8"} ({clinicData.reviews || "3,279"} reviews)
                 </Text>
               </View>
             </View>
 
-            {/* Action Buttons */}
             <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => handleWhatsAppPress(clinicData.mobilephone)}
-              >
+              <TouchableOpacity style={styles.actionButton} onPress={() => handleWhatsAppPress(clinicData.mobilephone)}>
                 <View style={styles.actionIconCircle}>
                   <FontAwesome name="envelope" size={25} color="#FFA500" />
                 </View>
                 <Text style={styles.actionButtonText}>Message</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => handleCallPress(clinicData.mobilephone)}
-              >
+              <TouchableOpacity style={styles.actionButton} onPress={() => handleCallPress(clinicData.mobilephone)}>
                 <View style={styles.actionIconCircle}>
                   <FontAwesome name="phone" size={25} color="#FFA500" />
                 </View>
                 <Text style={styles.actionButtonText}>Call</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleOpenMap}
-              >
+              <TouchableOpacity style={styles.actionButton} onPress={handleOpenMap}>
                 <View style={styles.actionIconCircle}>
                   <FontAwesome name="map-marker" size={25} color="#FFA500" />
                 </View>
                 <Text style={styles.actionButtonText}>Direction</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleShare}
-              >
+              <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
                 <View style={styles.actionIconCircle}>
                   <FontAwesome name="share-alt" size={25} color="#FFA500" />
                 </View>
@@ -205,32 +154,49 @@ const ClinicDetailScreen = () => {
 
             <View style={styles.divider} />
 
-            {/* Our Doctors Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Our doctor</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAll}>See All</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Improved Our Doctors Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Our Doctors</Text>
+                <TouchableOpacity>
+                </TouchableOpacity>
+              </View>
 
-            {/* Doctors List */}
-            <View style={styles.doctorsContainer}>
-              {doctors.map((doctor) => (
-                <View key={doctor.id} style={styles.doctorCard}>
-                  <Image source={doctor.image} style={styles.doctorImage} />
-                  <Text style={styles.doctorName}>{doctor.name}</Text>
-                  <Text style={styles.doctorRole}>{doctor.role}</Text>
-                </View>
-              ))}
+              <ScrollView 
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.doctorsScrollContainer}
+              >
+                {doctors.map((doctor) => (
+                  <View key={doctor.id} style={styles.doctorCard}>
+                    <Link
+                      href={{ 
+                        pathname: "/detaildokter/detail", 
+                        params: { 
+                          id: doctor.id, 
+                          name: doctor.name, 
+                          role: doctor.role, 
+                          image: doctor.image 
+                        } 
+                      }}
+                      asChild
+                    >
+                      <TouchableOpacity style={styles.doctorContent}>
+                        <Image source={doctor.image} style={styles.doctorImage} />
+                        <View style={styles.doctorInfo}>
+                          <Text style={styles.doctorName}>{doctor.name}</Text>
+                          <Text style={styles.doctorRole}>{doctor.role}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </Link>
+                  </View>
+                ))}
+              </ScrollView>
             </View>
 
             <View style={styles.divider} />
 
-            <Link
-              href="/bookappointment/booking"
-              asChild
-              style={styles.bookButton}
-            >
+            <Link href="/bookappointment/booking" asChild style={styles.bookButton}>
               <TouchableOpacity>
                 <Text style={styles.bookButtonText}>Book Now</Text>
               </TouchableOpacity>
@@ -245,7 +211,7 @@ const ClinicDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "fff",
+    backgroundColor: "#fff",
   },
   backButton: {
     position: "absolute",
@@ -258,7 +224,7 @@ const styles = StyleSheet.create({
   },
   clinicImage: {
     width: "100%",
-    height: 300, // tinggi gambar (bisa disesuaikan)
+    height: 300,
   },
   placeholder: {
     width: "100%",
@@ -292,7 +258,6 @@ const styles = StyleSheet.create({
   rating: {
     fontSize: 16,
     color: "#666",
-    // fontWeight: "bold",
   },
   actionButtonsContainer: {
     flexDirection: "row",
@@ -323,47 +288,66 @@ const styles = StyleSheet.create({
     backgroundColor: "#e0e0e0",
     marginVertical: 8,
   },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  // Updated styles for Our Doctors section
+  sectionContainer: {
+    marginTop: 20,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: '600',
+    color: '#333',
   },
   seeAll: {
-    fontSize: 16,
-    color: "#FFB900",
+    fontSize: 14,
+    color: '#2F80ED',
   },
-  doctorsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
+  doctorsScrollContainer: {
+    paddingBottom: 10,
   },
   doctorCard: {
-    width: "30%",
-    marginBottom: 16,
-    alignItems: "center",
+    width: 150,
+    marginRight: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  doctorContent: {
+    alignItems: 'center',
   },
   doctorImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 8,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#E8F4FF',
+  },
+  doctorInfo: {
+    alignItems: 'center',
   },
   doctorName: {
     fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
   },
   doctorRole: {
     fontSize: 14,
-    color: "#666",
-    textAlign: "center",
+    color: '#666',
+    textAlign: 'center',
   },
   bookButton: {
     backgroundColor: "#FFB900",
