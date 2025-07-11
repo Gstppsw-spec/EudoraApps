@@ -29,40 +29,31 @@ import Toast from "react-native-toast-message";
 import useStore from "../../store/useStore";
 import HeaderWithBack from "../component/headerWithBack";
 import useClinicDistances from "../hooks/useDistanceToClinic";
+import CountryPicker, { Country } from 'react-native-country-picker-modal';
 
-const apiUrl = Constants.expoConfig?.extra?.apiUrl
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const fetchListClinic = async () => {
-  const res = await fetch(
-    `${apiUrl}/getClinic`
-  );
+  const res = await fetch(`${apiUrl}/getClinic`);
   if (!res.ok) throw new Error("Network response was not ok");
   return res.json();
 };
 
 const sendOtp = async (formData: any) => {
-  const response = await axios.post(
-    `${apiUrl}/send_otpRegister`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/send_otpRegister`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
 const verifyOtp = async (formData: any) => {
-  const response = await axios.post(
-    `${apiUrl}/verify_otpRegistration`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/verify_otpRegistration`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
@@ -80,6 +71,18 @@ export default function Register() {
     referralCode: "",
     clinicId: null,
   });
+
+  // Country code state
+  const [country, setCountry] = useState<Country>({
+    callingCode: ['62'], // Default to Indonesia
+    cca2: 'ID',
+    currency: ['IDR'],
+    flag: 'flag-id',
+    name: 'Indonesia',
+    region: 'Asia',
+    subregion: 'South-Eastern Asia'
+  });
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const genderOptions = [
     { label: "FEMALE", value: "F" },
@@ -119,6 +122,27 @@ export default function Register() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePhoneChange = (text: string) => {
+    // Remove all non-digit characters
+    let cleanedText = text.replace(/[^0-9]/g, '');
+    
+    // Remove leading zeros
+    if (cleanedText.startsWith('0')) {
+      cleanedText = cleanedText.substring(1);
+    }
+    
+    // Limit to 15 characters max
+    cleanedText = cleanedText.substring(0, 15);
+    
+    handleChange("phone", cleanedText);
+  };
+
+  const isValidPhoneNumber = (phone: string) => {
+    // Phone should be 8-15 digits and not start with 0
+    const phoneRegex = /^[1-9]\d{7,14}$/;
+    return phoneRegex.test(phone);
+  };
+
   const showDatePicker = () => {
     setDatePickerVisibility(true);
   };
@@ -148,7 +172,7 @@ export default function Register() {
     },
     onError: (error) => {
       Toast.show({
-        type: "success",
+        type: "error",
         text2: "Registrasi gagal",
         position: "top",
         visibilityTime: 2000,
@@ -162,7 +186,7 @@ export default function Register() {
       if (data.status) {
         setCustomerId(data.customerId);
         setCustomerDetails({
-          fullname: data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname ,
+          fullname: data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname,
           email: data?.dataCustomer?.email,
           phone: data?.dataCustomer?.cellphonenumber,
           gender: data?.dataCustomer?.sex,
@@ -176,7 +200,7 @@ export default function Register() {
     },
     onError: (error) => {
       Toast.show({
-        type: "success",
+        type: "error",
         text2: "Registrasi gagal",
         position: "top",
         visibilityTime: 2000,
@@ -192,7 +216,15 @@ export default function Register() {
       formData.gender &&
       formData.phone
     ) {
-      mutation.mutate(formData);
+      if (!isValidPhoneNumber(formData.phone)) {
+        Alert.alert("Error", "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan.");
+        return;
+      }
+      
+      mutation.mutate({
+        ...formData,
+        countryCode: country.callingCode[0]
+      });
     } else {
       Toast.show({
         type: "info",
@@ -215,6 +247,7 @@ export default function Register() {
       const payload = {
         ...formData,
         otp: otp,
+        countryCode: country.callingCode[0]
       };
       mutationVerifyOtp.mutate(payload);
     } else {
@@ -244,10 +277,32 @@ export default function Register() {
       const distance = distances?.[clinic.id];
       return {
         ...clinic,
-        distance: distance ?? Infinity, // kalau jarak belum tersedia, letakkan di akhir
+        distance: distance ?? Infinity,
       };
     })
     .sort((a, b) => a.distance - b.distance);
+
+  const renderWhatsAppInput = () => (
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Whatsapp</Text>
+      <View style={styles.phoneInputContainer}>
+        <TouchableOpacity
+          style={styles.countryCodeButton}
+          onPress={() => setShowCountryPicker(true)}
+        >
+          <Text style={styles.countryCodeText}>+{country.callingCode[0]}</Text>
+          <Ionicons name="chevron-down" size={16} color="#64748b" />
+        </TouchableOpacity>
+        <TextInput
+          style={[styles.input, styles.phoneInput]}
+          value={formData.phone}
+          onChangeText={handlePhoneChange}
+          keyboardType="phone-pad"
+          placeholder="8123456789"
+        />
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -280,15 +335,7 @@ export default function Register() {
                     />
                   </View>
 
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Whatsapp</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={formData.phone}
-                      onChangeText={(text) => handleChange("phone", text)}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
+                  {renderWhatsAppInput()}
 
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Email</Text>
@@ -337,7 +384,7 @@ export default function Register() {
                     <Text style={styles.label}>Lokasi Klinik</Text>
                     <Pressable
                       style={styles.dropdownContainer}
-                      onPress={() => setClinicModalVisible(true)} // Open the modal
+                      onPress={() => setClinicModalVisible(true)}
                     >
                       <Text style={styles.text}>
                         {formData.clinicLocation || "Pilih Klinik Terdekat"}
@@ -353,7 +400,7 @@ export default function Register() {
                         <TouchableOpacity
                           key={item.value}
                           style={styles.radioOption}
-                          onPress={() => handleChange("gender", item.value)} // Value = "F" or "M"
+                          onPress={() => handleChange("gender", item.value)}
                         >
                           <View
                             style={[
@@ -392,7 +439,6 @@ export default function Register() {
                     )}
                   </TouchableOpacity>
 
-                  {/* Calendar Modal */}
                   <DateTimePickerModal
                     isVisible={isDatePickerVisible}
                     mode="date"
@@ -401,7 +447,6 @@ export default function Register() {
                     onCancel={hideDatePicker}
                   />
 
-                  {/* Modal for Clinic Selection */}
                   <Modal
                     transparent={true}
                     animationType="slide"
@@ -465,6 +510,22 @@ export default function Register() {
                       </View>
                     </View>
                   </Modal>
+
+                  <CountryPicker
+                    visible={showCountryPicker}
+                    withCallingCode
+                    withFilter
+                    withFlag
+                    withAlphaFilter
+                    withCallingCodeButton
+                    withEmoji
+                    onSelect={(selectedCountry) => {
+                      setCountry(selectedCountry);
+                      setShowCountryPicker(false);
+                    }}
+                    onClose={() => setShowCountryPicker(false)}
+                    countryCode={country.cca2}
+                  />
                 </View>
               </TouchableWithoutFeedback>
             </>
@@ -503,7 +564,7 @@ export default function Register() {
                       maxLength={6}
                     />
                     <Text style={styles.otpNote}>
-                      {t("codeSentTo")} {formData.phone}
+                      {t("codeSentTo")} +{country.callingCode[0]} {formData.phone}
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -555,6 +616,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#1e293b",
   },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  countryCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 10,
+    marginRight: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#e2e8f0',
+  },
+  countryCodeText: {
+    color: '#1e293b',
+    fontSize: 14,
+    marginRight: 5,
+  },
+  phoneInput: {
+    flex: 1,
+  },
+  phoneHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
   placeholderText: { color: "#9ca3af" },
   text: { color: "#1e293b", fontSize: 14 },
   dropdownContainer: {
@@ -570,17 +659,17 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
-    width: "90%", // Width of the modal
+    width: "90%",
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 20,
     height: "50%",
-    elevation: 5, // Optional shadow for Android
+    elevation: 5,
   },
   modalHeader: {
     alignItems: "center",
@@ -672,7 +761,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: "#f9fafb",
     fontWeight: "600",
-    // letterSpacing: 2,
     marginTop: 15,
   },
   otpNote: {
@@ -687,7 +775,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    // marginTop: 16,
     shadowColor: "#B0174C",
     shadowOffset: {
       width: 0,
@@ -720,13 +807,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     width: "90%",
-    maxWidth: 400, // ✅ biar tidak terlalu lebar di tablet
+    maxWidth: 400,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-
   logoContainer: {
     width: 80,
     height: 80,
@@ -767,7 +853,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
   },
-
   clinicDistanceText: {
     fontSize: 14,
     color: "#888",
