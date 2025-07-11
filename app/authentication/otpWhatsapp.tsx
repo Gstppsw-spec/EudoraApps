@@ -22,9 +22,9 @@ import {
   View,
 } from "react-native";
 import useStore from "../../store/useStore";
+import CountryPicker, { Country } from 'react-native-country-picker-modal';
 
-const apiUrl = Constants.expoConfig?.extra?.apiUrl
-
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const sendOtp = async (formData: any) => {
   const response = await axios.post(
@@ -67,6 +67,39 @@ export default function Login() {
   const lang = useStore((state) => state.lang);
   const setLang = useStore((state) => state.setLang);
   const setCustomerDetails = useStore((state) => state.setCustomerDetails);
+  
+  // Country code state
+  const [countryCode, setCountryCode] = useState<Country>({
+    callingCode: ['62'],
+    cca2: 'ID',
+    currency: ['IDR'],
+    flag: 'flag-id',
+    name: 'Indonesia',
+    region: 'Asia',
+    subregion: 'South-Eastern Asia'
+  });
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+
+  const handlePhoneChange = (text: string) => {
+    // Remove all non-digit characters
+    let cleanedText = text.replace(/[^0-9]/g, '');
+    
+    // Remove leading zeros
+    if (cleanedText.startsWith('0')) {
+      cleanedText = cleanedText.substring(1);
+    }
+    
+    // Limit to 15 characters max
+    cleanedText = cleanedText.substring(0, 15);
+    
+    setPhone(cleanedText);
+  };
+
+  const isValidPhoneNumber = (phone: string) => {
+    // Phone should be 8-15 digits and not start with 0
+    const phoneRegex = /^[1-9]\d{7,14}$/;
+    return phoneRegex.test(phone);
+  };
 
   const mutation = useMutation({
     mutationFn: sendOtp,
@@ -90,13 +123,20 @@ export default function Login() {
   });
 
   const handleSendOtp = () => {
-    if (phone) {
-      mutation.mutate({
-        phone: phone,
-      });
-    } else {
+    if (!phone) {
       setShowErrorModal(true);
+      return;
     }
+
+    if (!isValidPhoneNumber(phone)) {
+      Alert.alert("Error", "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan.");
+      return;
+    }
+
+    mutation.mutate({
+      phone: phone,
+      countryCode: countryCode.callingCode[0]
+    });
   };
 
   const mutatioVerifyOtp = useMutation({
@@ -150,7 +190,12 @@ export default function Login() {
     mutatioVerifyOtp.mutate({
       phone: phone,
       otp: otp,
+      countryCode: countryCode.callingCode[0]
     });
+  };
+
+  const onSelectCountry = (country: Country) => {
+    setCountryCode(country);
   };
 
   return (
@@ -233,18 +278,35 @@ export default function Login() {
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{t("whatsappNumber")}</Text>
                 <View style={styles.inputWrapper}>
-                  <View style={styles.prefixContainer}>
-                    <Text style={styles.prefix}>+62</Text>
-                  </View>
+                  <TouchableOpacity 
+                    style={styles.prefixContainer}
+                    onPress={() => setShowCountryPicker(true)}
+                  >
+                    <Text style={styles.prefix}>+{countryCode.callingCode[0]}</Text>
+                  </TouchableOpacity>
                   <TextInput
                     style={styles.input}
                     placeholder="8123456789"
                     placeholderTextColor="#9ca3af"
                     keyboardType="phone-pad"
                     value={phone}
-                    onChangeText={setPhone}
+                    onChangeText={handlePhoneChange}
                   />
                 </View>
+                {showCountryPicker && (
+                  <CountryPicker
+                    visible={showCountryPicker}
+                    withCallingCode
+                    withFilter
+                    withFlag
+                    withAlphaFilter
+                    withCallingCodeButton
+                    withEmoji
+                    onSelect={onSelectCountry}
+                    onClose={() => setShowCountryPicker(false)}
+                    countryCode={countryCode.cca2}
+                  />
+                )}
               </View>
             ) : (
               <View style={styles.formGroup}>
@@ -261,7 +323,7 @@ export default function Login() {
                   maxLength={6}
                 />
                 <Text style={styles.otpNote}>
-                  {t("codeSentTo")} {phone}
+                  {t("codeSentTo")} +{countryCode.callingCode[0]}{phone}
                 </Text>
               </View>
             )}
@@ -520,6 +582,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontWeight: "500",
   },
+  phoneHint: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 8,
+    fontStyle: "italic",
+  },
   otpInput: {
     height: 60,
     fontSize: 20,
@@ -530,7 +598,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: "#f9fafb",
     fontWeight: "600",
-    // letterSpacing: 2,
   },
   otpNote: {
     fontSize: 13,
