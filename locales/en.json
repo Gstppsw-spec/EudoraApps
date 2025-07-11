@@ -1,0 +1,22 @@
+{
+  "welcome": "Welcome",
+  "login": "Login",
+  "input_whatsapp": "Enter your WhatsApp number to continue",
+  "input_verification": "Enter the verification code that was sent",
+   "sendOtpCode": "Send OTP Code",
+    "confirm": "Confirm",
+    "didNotReceiveCode": "Didn’t receive the code? ",
+    "resend": "Resend",
+     "confirmOtpMessage": "Are you sure you want to verify the OTP code?",
+     "cancel": "Cancel",
+      "yesVerify": "Yes, Verify",
+      "pleaseEnterWhatsapp": "Please enter your WhatsApp number first",
+      "successTitle": "Success!",
+    "otpSentMessage": "OTP has been sent to your WhatsApp number",
+     "noAccount": "Don't have an account? ",
+     "register": "Register",
+     "codeSentTo": "Code sent to ",
+      "verificationCode": "Verification Code",
+       "whatsappNumber": "WhatsApp Number",
+       "enter6DigitCode": "Enter 6-digit code"
+}

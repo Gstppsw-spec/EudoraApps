@@ -2,6 +2,7 @@ import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import Constants from "expo-constants";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -13,6 +14,8 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -20,31 +23,34 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { io } from "socket.io-client";
 import useStore from "../../../store/useStore";
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const socket = io("https://sys.eudoraclinic.com:3001");
+
+const getDoctorClinic = async ({ queryKey }: any) => {
+  const [, locationId] = queryKey;
+  const res = await fetch(`${apiUrl}/getDoctorByLocationId/${locationId}`);
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+};
 
 const getMessages = async ({ queryKey }: any) => {
   const [, customerId, employeeId] = queryKey;
   const res = await fetch(
-    `https://sys.eudoraclinic.com:84/apieudora/getMessages?sender_id=${employeeId}&sender_type=employee&receiver_id=${customerId}&receiver_type=userapps`
+    `${apiUrl}/getMessages?sender_id=${employeeId}&sender_type=employee&receiver_id=${customerId}&receiver_type=userapps`
   );
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
 const sendMessages = async (formData: any) => {
-  const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/sendMessages",
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/sendMessages`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
@@ -73,15 +79,10 @@ const sendMessagesImages = async ({
     } as any);
   }
 
-  console.log(formData);
-
-  const res = await fetch(
-    "https://sys.eudoraclinic.com:84/apieudora/sendMessagesByCustomerApps",
-    {
-      method: "POST",
-      body: formData,
-    }
-  );
+  const res = await fetch(`${apiUrl}/sendMessagesByCustomerApps`, {
+    method: "POST",
+    body: formData,
+  });
 
   console.log(res);
 
@@ -105,6 +106,22 @@ const ChatScreen = () => {
   const [previewUri, setPreviewUri] = useState("");
   const [imageUri, setImageUri] = useState(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const customerDetails = useStore((state) => state.customerDetails);
+
+  const {
+    data: doctorData,
+    isLoading: isLoadingDoctor,
+    error: errorDoctor,
+    refetch: refetchDoctor,
+    isRefetching: isRefetchingDoctor,
+  } = useQuery({
+    queryKey: [
+      "getDoctorByLocationId",
+      customerDetails?.locationCustomerRegister,
+    ],
+    queryFn: getDoctorClinic,
+    enabled: !!customerDetails?.locationCustomerRegister,
+  });
 
   const employeeId = 10;
   const queryClient = useQueryClient();
@@ -168,12 +185,6 @@ const ChatScreen = () => {
           : styles.receivedMessage,
       ]}
     >
-      {!item.employee && (
-        <Image
-          source={{ uri: "https://randomuser.me/api/portraits/women/44.jpg" }}
-          style={styles.avatar}
-        />
-      )}
       <View
         style={[
           styles.messageBubble,
@@ -185,15 +196,13 @@ const ChatScreen = () => {
         {item.type === "image" ? (
           <TouchableOpacity
             onPress={() => {
-              setPreviewUri(
-                `https://sys.eudoraclinic.com:84/apieudora/${item.message}`
-              );
+              setPreviewUri(`${apiUrl}/${item.message}`);
               setPreviewVisible(true);
             }}
           >
             <Image
               source={{
-                uri: `https://sys.eudoraclinic.com:84/apieudora/${item.message}`,
+                uri: `${apiUrl}/${item.message}`,
               }}
               style={{
                 width: 200,
@@ -341,7 +350,7 @@ const ChatScreen = () => {
     socket.emit("joinRoom", `userapps_${customerId}`);
     socket.on("newMessage", (message) => {
       console.log("New message received", message);
-      queryClient.invalidateQueries(["getMessage", customerId])
+      queryClient.invalidateQueries(["getMessage", customerId]);
     });
 
     return () => {
@@ -367,6 +376,11 @@ const ChatScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
@@ -377,12 +391,14 @@ const ChatScreen = () => {
           <View style={styles.headerContent}>
             <Image
               source={{
-                uri: "https://randomuser.me/api/portraits/women/44.jpg",
+                uri: `${apiUrl}/uploads/${doctorData?.doctorEuodora[0]?.image}`,
               }}
               style={styles.headerAvatar}
             />
             <View style={styles.headerText}>
-              <Text style={styles.headerName}>Doctor</Text>
+              <Text style={styles.headerName}>
+                {doctorData?.doctorEuodora[0]?.name}
+              </Text>
               <Text style={styles.headerStatus}>Online</Text>
             </View>
           </View>
@@ -390,7 +406,7 @@ const ChatScreen = () => {
             onPress={() => onRefresh()}
             style={{ marginRight: 10 }}
           >
-            <FontAwesome name="refresh" size={20} color="#FFB900" />
+            <FontAwesome name="refresh" size={20} color="#B0174C" />
           </TouchableOpacity>
         </View>
 
@@ -405,11 +421,6 @@ const ChatScreen = () => {
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
           }
-          // onContentSizeChange={() => {
-          //   if (data?.data?.length > 0) {
-          //     flatListRef.current?.scrollToEnd({ animated: true });
-          //   }
-          // }}
         />
 
         {/* Message Input */}
@@ -427,6 +438,7 @@ const ChatScreen = () => {
             value={newMessage}
             onChangeText={setNewMessage}
             multiline
+            placeholderTextColor={"black"}
           />
           <TouchableOpacity
             style={styles.sendButton}
@@ -436,7 +448,7 @@ const ChatScreen = () => {
             <Ionicons
               name="send"
               size={24}
-              color={newMessage.trim() === "" ? "#ccc" : "#FFB900"}
+              color={newMessage.trim() === "" ? "#ccc" : "#B0174C"}
             />
           </TouchableOpacity>
         </View>
@@ -552,6 +564,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
+    paddingTop: StatusBar.currentHeight,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
@@ -613,7 +626,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sentBubble: {
-    backgroundColor: "#FFECB3",
+    backgroundColor: "#FFE5F8",
     borderBottomRightRadius: 4,
   },
   receivedBubble: {
@@ -655,6 +668,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginHorizontal: 8,
     fontSize: 16,
+    color: "black",
   },
   attachmentButton: {
     padding: 8,

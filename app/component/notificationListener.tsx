@@ -11,10 +11,6 @@ export default function NotificationListener() {
   const pathname = usePathname();
   const pendingRoute = useStore((state) => state.pendingRoute);
 
-  console.log(pathname);
-
-  console.log('ini pending route', pendingRoute);
-
   const pathnameRef = useRef(pathname);
   
   useEffect(() => {

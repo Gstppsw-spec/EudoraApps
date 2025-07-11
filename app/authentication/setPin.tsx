@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
@@ -19,16 +20,14 @@ import {
 } from "react-native";
 import useStore from "../../store/useStore";
 
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
+
 const setPinUsers = async (formData: any) => {
-  const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/set_pin",
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/set_pin`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
@@ -45,12 +44,12 @@ export default function SetPin() {
       if (data.status) {
         router.replace("/tabs/home");
         registerForPushNotificationsAsync().then((token) => {
-            if (token) {
-              console.log("✅ Expo Push Token:", token);
-            } else {
-              console.log("❌ Tidak mendapatkan token");
-            }
-          });
+          if (token) {
+            console.log("✅ Expo Push Token:", token);
+          } else {
+            console.log("❌ Tidak mendapatkan token");
+          }
+        });
       } else {
         Alert.alert("Gagal", data.message || "Gagal menyimpan PIN");
       }
@@ -120,8 +119,11 @@ export default function SetPin() {
               />
             </View>
 
-            <TouchableOpacity 
-              style={[styles.button, mutation.isPending && styles.buttonDisabled]} 
+            <TouchableOpacity
+              style={[
+                styles.button,
+                mutation.isPending && styles.buttonDisabled,
+              ]}
               onPress={handleSetPin}
               disabled={mutation.isPending}
             >
@@ -229,13 +231,13 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
   button: {
-    backgroundColor: "#FEBA43",
+    backgroundColor: "#B0174C",
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
-    shadowColor: "#FEBA43",
+    shadowColor: "#B0174C",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

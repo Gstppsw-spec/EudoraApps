@@ -1,15 +1,29 @@
-import { FontAwesome } from "@expo/vector-icons";
+import {
+  Feather,
+  FontAwesome,
+  Ionicons,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Link } from "expo-router";
-import { useEffect, useState } from "react";
+import { BlurView } from "expo-blur";
+import * as Clipboard from "expo-clipboard";
+import Constants from "expo-constants";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Notifications from "expo-notifications";
+import { Link, router } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   Image,
+  Modal,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  Share,
   StatusBar,
   StyleSheet,
   Switch,
@@ -24,55 +38,67 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import Carousel from "react-native-reanimated-carousel";
+import Toast from "react-native-toast-message";
 import useStore from "../../../store/useStore";
 
 const { width } = Dimensions.get("window");
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const fetchAvailableTime = async ({ queryKey }: any) => {
   const [, customerId] = queryKey;
-  const res = await fetch(
-    `https://sys.eudoraclinic.com:84/apieudora/getListBooking/${customerId}/1`
-  );
+  const res = await fetch(`${apiUrl}/getListBooking/${customerId}/1`);
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
 const fetchDetailCustomer = async ({ queryKey }: any) => {
   const [, customerId] = queryKey;
-  const res = await fetch(
-    `https://sys.eudoraclinic.com:84/apieudora/getDetailCustomer/${customerId}`
-  );
+  const res = await fetch(`${apiUrl}/getDetailCustomer/${customerId}`);
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
 const canceledBooking = async (formData: any) => {
-  const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/canceledBooking",
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/canceledBooking`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
 export default function HomeScreen() {
   const customerId = useStore((state: { customerid: any }) => state.customerid);
-  console.log(customerId);
-
   const [isEnabled, setIsEnabled] = useState(false);
   const [switchStates, setSwitchStates] = useState<boolean[]>([]);
-  // const customerId = 64685;
   const queryClient = useQueryClient();
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["35%", "50%"], []);
+
+  const handlePresentModalPress = useCallback((bookingId) => {
+    setCurrentBooking(bookingId);
+    bottomSheetModalRef.current?.present();
+  }, []);
+
+  const handleCancel = () => {
+    setCurrentBooking(null);
+    bottomSheetModalRef.current?.dismiss();
+  };
+
   const imageData = [
-    "https://via.placeholder.com/400x200/FFB6C1/000000?text=Slide+1",
-    "https://via.placeholder.com/400x200/87CEFA/000000?text=Slide+2",
-    "https://via.placeholder.com/400x200/90EE90/000000?text=Slide+3",
+    `${apiUrl}/uploads/iklan/carousel4.jpg`,
+    `${apiUrl}/uploads/iklan/carousel.jpg`,
   ];
+
+  const imageDataEvent = [
+    `${apiUrl}/uploads/iklan/promo779k.png`,
+    `${apiUrl}/uploads/iklan/1rupiah.png`,
+  ];
+
   const progressValue = useSharedValue(0);
+  const { addReminder, removeReminder } = useStore();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState(null);
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["getListBooking", customerId],
@@ -80,50 +106,124 @@ export default function HomeScreen() {
     enabled: !!customerId,
   });
 
-  const { data: customerDetail, isLoading: isLoadingCustomerDetail } = useQuery(
-    {
-      queryKey: ["getDetailCustomer", customerId],
-      queryFn: fetchDetailCustomer,
-      enabled: !!customerId,
-    }
-  );
+  const {
+    data: customerDetail,
+    isLoading: isLoadingCustomerDetail,
+    refetch: refectCustomerDetail,
+  } = useQuery({
+    queryKey: ["getDetailCustomer", customerId],
+    queryFn: fetchDetailCustomer,
+    enabled: !!customerId,
+  });
 
   const mutation = useMutation({
     mutationFn: canceledBooking,
     onSuccess: (data) => {
-      // setModalVisible(true);
+      setCurrentBooking(null);
+      bottomSheetModalRef.current?.dismiss();
+      Toast.show({
+        type: "success",
+        text2: "Appointment berhsil dicancel!",
+        position: "top",
+        visibilityTime: 2000,
+      });
       queryClient.invalidateQueries(["getListBooking", customerId]);
     },
     onError: (error) => {
+      setCurrentBooking(null);
+      bottomSheetModalRef.current?.dismiss();
+      Toast.show({
+        type: "error",
+        text2: "Appointment gagal dicancel!",
+        position: "top",
+        visibilityTime: 2000,
+      });
       console.error("Error posting data:", error);
     },
   });
 
   useEffect(() => {
-    if (data?.customerbooking) {
-      setSwitchStates(data.customerbooking.map(() => false));
-    }
+    if (!data?.customerbooking) return;
+    const { isReminderActive } = useStore.getState();
+    const newSwitchStates = data.customerbooking.map(
+      (booking: { BOOKINGID: any }) => isReminderActive(booking.BOOKINGID)
+    );
+
+    setSwitchStates(newSwitchStates);
   }, [data]);
 
   const toggleSwitch = (index: number) => {
+    if (!data?.customerbooking) return;
+
+    const booking = data.customerbooking[index];
+    const wasEnabled = switchStates[index];
+    const willBeEnabled = !wasEnabled;
     setSwitchStates((prevState) => {
       const updated = [...prevState];
-      updated[index] = !updated[index];
+      updated[index] = willBeEnabled;
+
       return updated;
     });
+    if (willBeEnabled) {
+      const dateOnly = new Date(booking.TREATMENTDATE.split(" ")[0]);
+      dateOnly.setHours(0, 0, 0, 0);
+      const bookingDateTime = new Date(
+        booking.TREATMENTDATE.replace(" ", "T").split("T")[0] +
+          "T" +
+          booking.TIME +
+          ":00"
+      );
+      const twoHoursBefore = new Date(
+        bookingDateTime.getTime() - 2 * 60 * 60 * 1000
+      );
+
+      const now = new Date();
+      if (dateOnly > now) {
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Hari ini kamu ada booking!",
+            body: `${booking.SERVICE} di ${booking.LOCATIONNAME}`,
+            sound: true,
+          },
+          trigger: { type: "date", date: dateOnly },
+        });
+      }
+
+      if (twoHoursBefore > now) {
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Booking 2 jam lagi!",
+            body: `${booking.SERVICE} jam ${booking.TIME} di ${booking.LOCATIONNAME}`,
+            sound: true,
+          },
+          trigger: { type: "date", date: twoHoursBefore },
+        });
+      }
+
+      addReminder(booking.BOOKINGID);
+    } else {
+      removeReminder(booking.BOOKINGID);
+    }
   };
 
-  const handleCanceledBooking = (bookingId: number) => {
-    // console.log(bookingId);
+  const cancelModal = () => {
+    setModalVisible(false);
+    setCurrentBooking(null);
+  };
 
+
+  const confirmCanceledBooking = () => {
     mutation.mutate({
-      bookingId: bookingId,
+      bookingId: currentBooking,
     });
+    
   };
 
   const onRefresh = () => {
     refetch();
+    refectCustomerDetail();
   };
+
   return (
     <SafeAreaView style={styles.containerArea}>
       <ScrollView
@@ -133,98 +233,10 @@ export default function HomeScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
         }
       >
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle="dark-content"
-        />
-
         <View style={styles.container}>
-          <View style={styles.searchContainer}>
-            <FontAwesome
-              name="search"
-              size={18}
-              color="grey"
-              style={styles.icon}
-            />
-            <TextInput
-              placeholder="Search"
-              placeholderTextColor="grey"
-              style={styles.input}
-            />
-            <TouchableOpacity onPress={() => console.log("Filter pressed")}>
-              <FontAwesome name="filter" size={18} color="grey" />
-            </TouchableOpacity>
-          </View>
-
-          <View
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "space-between",
-              width: "100%",
-              alignItems: "center",
-            }}
-          >
-            <View style={{ gap: 5, marginLeft: 20 }}>
-              <Text
-                style={{
-                  color: "white",
-                  fontWeight: "bold",
-                  fontSize: 16,
-                  marginBottom: 2,
-                }}
-              >
-                {customerDetail?.detailcustomer?.[0]?.FIRSTNAME}{" "}
-                {customerDetail?.detailcustomer?.[0]?.LASTNAME}
-              </Text>
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                <FontAwesome name="map-marker" size={14} color="#FFB900" />
-                <Text style={{ color: "white", fontSize: 12 }}>
-                  {customerDetail?.detailcustomer?.[0]?.ADDRESS
-                    ? customerDetail?.detailcustomer?.[0]?.ADDRESS
-                    : "-"}
-                </Text>
-              </View>
-            </View>
-
-            <View
-              style={{
-                borderColor: "#272835",
-                borderWidth: 0.1,
-                borderRadius: "100%",
-                padding: 15,
-                backgroundColor: "#1A1B25",
-                marginRight: 20,
-              }}
-            >
-              <Link href={"/notification"}>
-                <FontAwesome name="bell" size={18} color="white" />
-              </Link>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.floatingBox}>
-            <Text style={{ color: "white", fontSize: 12 }}>
-              POINT :{" "}
-              {Number(
-                customerDetail?.detailcustomer?.[0]?.TOTALPOINT || 0
-              ).toLocaleString("id-ID")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ flex: 1, justifyContent: "center", marginTop: 50 }}>
           <Carousel
             width={width}
-            height={200}
+            height={320}
             data={imageData}
             scrollAnimationDuration={1000}
             autoPlay
@@ -238,54 +250,227 @@ export default function HomeScreen() {
                 style={{
                   flex: 1,
                   backgroundColor: "#ccc",
-                  borderRadius: 10,
                   justifyContent: "center",
                   alignItems: "center",
-                  margin: 10,
                 }}
               >
                 <Image
                   source={{ uri: item }}
                   style={{ width: "100%", height: "100%" }}
-                  resizeMode="cover"
+                  resizeMode="repeat"
                 />
               </View>
             )}
           />
+          <View style={styles.indicatorContainer}>
+            {imageData.map((_, i) => (
+              <IndicatorDot key={i} index={i} progressValue={progressValue} />
+            ))}
+          </View>
+
+          <LinearGradient
+            colors={["#FFFFFF", "#FFFFFF", "#B0174C"]} // putih dominan, oranye sedikit
+            locations={[0, 0.85, 1]} // oranye hanya di 5% bagian bawah
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.pointsCard}
+          >
+            <Link href="/Point/point" style={styles.pointItem}>
+              <View style={styles.pointContent}>
+                <FontAwesome
+                  name="gift" // bisa diganti "gift", "diamond", "trophy", dll
+                  size={18}
+                  color="#B0174C"
+                  style={{ marginLeft: 6 }}
+                />
+                <Text style={styles.pointValue}>
+                  {customerDetail?.detailcustomer[0]?.TOTALPOINT
+                    ? parseInt(
+                        customerDetail.detailcustomer[0].TOTALPOINT
+                      ).toLocaleString("id-ID")
+                    : "0"}{" "}
+                  POINTS
+                </Text>
+              </View>
+            </Link>
+            <View style={styles.divider} />
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginHorizontal: 10,
+              }}
+            >
+              <Text style={styles.referralLabel}>
+                Dapatkan point dengan undang teman kamu
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  marginRight: 5,
+                }}
+              >
+                <TouchableOpacity
+                  style={styles.referralContainer}
+                  onPress={() => {
+                    const code =
+                      customerDetail?.detailcustomer[0]?.REFERRALCODE ||
+                      "UNKNOWN";
+                    Clipboard.setStringAsync(code);
+                    if (Platform.OS === "android") {
+                      Toast.show({
+                        type: "success",
+                        text2: "Refferal code berhasil dicopy!",
+                        position: "top",
+                        visibilityTime: 2000,
+                      });
+                    } else {
+                      Toast.show({
+                        type: "success",
+                        text2: "Refferal code berhasil dicopy!",
+                        position: "top",
+                        visibilityTime: 2000,
+                      });
+                    }
+                  }}
+                >
+                  <Feather name="copy" size={20} color="#B0174C" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={async () => {
+                    try {
+                      const code =
+                        customerDetail?.detailcustomer[0]?.REFERRALCODE ||
+                        "UNKNOWN";
+                      const message = `Gunakan kode referral saya: ${code} untuk daftar di Eudora Clinic! ✨`;
+
+                      await Share.share({ message });
+                    } catch (error) {
+                      Toast.show({
+                        type: "error",
+                        text2: "Gagal share refferal code!",
+                        position: "top",
+                        visibilityTime: 2000,
+                      });
+                    }
+                  }}
+                >
+                  <FontAwesome name="share-alt" size={20} color="#B0174C" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </LinearGradient>
         </View>
-        <View style={styles.indicatorContainer}>
-          {imageData.map((_, i) => (
-            <IndicatorDot key={i} index={i} progressValue={progressValue} />
-          ))}
+
+        <View
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            width: "100%",
+            position: "absolute",
+            top: 10,
+            alignItems: "center",
+          }}
+        >
+          <BlurView intensity={30} tint="dark" style={styles.searchContainer}>
+            <FontAwesome
+              name="search"
+              size={15}
+              color="#fff"
+              style={styles.icon}
+            />
+            <TextInput
+              placeholder="Search"
+              placeholderTextColor="white"
+              style={styles.input}
+            />
+            <TouchableOpacity>
+              <FontAwesome name="filter" size={15} color="#fff" />
+            </TouchableOpacity>
+          </BlurView>
+          <View
+            style={{
+              borderColor: "#272835",
+              borderWidth: 0.1,
+              borderRadius: "100%",
+              padding: 15,
+              backgroundColor: "#1A1B25",
+              marginRight: 10,
+              alignItems: "center",
+            }}
+          >
+            <Link href={"/notification"}>
+              <FontAwesome name="bell" size={15} color="white" />
+            </Link>
+          </View>
+        </View>
+
+        <View
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            width: "100%",
+            alignItems: "center",
+            marginTop: 70,
+            marginBottom: 10,
+          }}
+        >
+          <View style={{ gap: 5, marginLeft: 20 }}>
+            <Text
+              style={{
+                color: "black",
+                fontWeight: "bold",
+                fontSize: 16,
+                marginBottom: 2,
+              }}
+            >
+              {" "}
+              Hi {customerDetail?.detailcustomer?.[0]?.FIRSTNAME}{" "}
+              {customerDetail?.detailcustomer?.[0]?.LASTNAME}, siap menjadi
+              cantik?
+            </Text>
+          </View>
         </View>
 
         <View style={styles.containerCategory}>
           <View style={styles.iconCategory}>
             <TouchableOpacity style={styles.buttonIconCategory}>
-              <FontAwesome name="facebook-official" size={18} color="#FFB900" />
+              <MaterialCommunityIcons
+                name="face-woman-shimmer"
+                size={24}
+                color="#B0174C"
+              />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11 }}>Face</Text>
+            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Face</Text>
           </View>
 
           <View style={styles.iconCategory}>
             <TouchableOpacity style={styles.buttonIconCategory}>
-              <FontAwesome name="automobile" size={18} color="#FFB900" />
+              <FontAwesome name="female" size={20} color="#B0174C" />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11 }}>Body</Text>
+            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Body</Text>
           </View>
 
           <View style={styles.iconCategory}>
             <TouchableOpacity style={styles.buttonIconCategory}>
-              <FontAwesome name="shopping-bag" size={18} color="#FFB900" />
+              <FontAwesome name="shopping-bag" size={20} color="#B0174C" />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11 }}>Product</Text>
+            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Product</Text>
           </View>
 
           <View style={styles.iconCategory}>
-            <TouchableOpacity style={styles.buttonIconCategory}>
-              <FontAwesome name="files-o" size={18} color="#FFB900" />
+            <TouchableOpacity
+              style={styles.buttonIconCategory}
+              onPress={() => router.push("/category/more-category")}
+            >
+              <FontAwesome name="ellipsis-h" size={20} color="#B0174C" />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11 }}>More</Text>
+            <Text style={{ fontSize: 11, fontWeight: "bold" }}>More</Text>
           </View>
         </View>
 
@@ -299,13 +484,13 @@ export default function HomeScreen() {
               alignItems: "center",
             }}
           >
-            <Text style={{ fontWeight: "bold", fontSize: 18 }}>
+            <Text style={{ fontWeight: "bold", fontSize: 16 }}>
               Upcoming Appointments
             </Text>
-            <Link href={"/mybooking/mybooking"} asChild>
+            <Link href={"/mybooking/myBooking"} asChild>
               <TouchableOpacity>
                 <Text
-                  style={{ fontSize: 14, fontWeight: "bold", color: "#FFB900" }}
+                  style={{ fontSize: 14, fontWeight: "bold", color: "#B0174C" }}
                 >
                   See All
                 </Text>
@@ -378,7 +563,7 @@ export default function HomeScreen() {
                       <View style={styles.row}>
                         <Image
                           source={{
-                            uri: `https://sys.eudoraclinic.com:84/apieudora/upload/${booking.IMAGE}`,
+                            uri: `${apiUrl}/upload/${booking.IMAGE}`,
                           }}
                           style={styles.clinicImage}
                         />
@@ -398,9 +583,7 @@ export default function HomeScreen() {
                       <View style={styles.actionButtons}>
                         <TouchableOpacity
                           style={styles.cancelButton}
-                          onPress={() =>
-                            handleCanceledBooking(booking.BOOKINGID)
-                          }
+                          onPress={() => handlePresentModalPress(booking.BOOKINGID)}
                         >
                           <Text style={styles.cancelText}>Cancel Booking</Text>
                         </TouchableOpacity>
@@ -410,10 +593,140 @@ export default function HomeScreen() {
                 );
               })
           ) : (
-            <Text>Tidak ada data...</Text>
+            <View style={styles.emptyContainer}>
+              <Ionicons name="medkit-outline" size={40} color="#E0E0E0" />
+              <Text style={styles.emptyTitle}>No History found</Text>
+              <Text style={styles.emptySubtitle}>
+                You don't have any upcoming appointment yet
+              </Text>
+            </View>
           )}
         </View>
+
+        <View>
+          <View style={{ paddingHorizontal: 20 }}>
+            <View
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 15,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontWeight: "bold", fontSize: 14 }}>
+                Our Beauty Event,
+              </Text>
+
+              <TouchableOpacity>
+                <Text
+                  style={{ fontSize: 14, fontWeight: "bold", color: "#FFB900" }}
+                ></Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Carousel
+            width={width}
+            height={200}
+            data={imageDataEvent}
+            scrollAnimationDuration={1000}
+            autoPlay
+            autoPlayInterval={3000}
+            pagingEnabled
+            onProgressChange={(_, absoluteProgress) =>
+              (progressValue.value = absoluteProgress)
+            }
+            renderItem={({ item }) => (
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: "#ccc",
+                  borderRadius: 10,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  margin: 10,
+                }}
+              >
+                <Image
+                  source={{ uri: item }}
+                  style={{ width: "100%", height: "100%", borderRadius: 10 }}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+          />
+          <View style={styles.indicatorContainer}>
+            {imageData.map((_, i) => (
+              <IndicatorDot key={i} index={i} progressValue={progressValue} />
+            ))}
+          </View>
+        </View>
+
+        <View style={{ marginBottom: 80 }} />
       </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={cancelModal} // Close on back button
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Cancel Booking</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to cancel this booking?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={cancelModal}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => confirmCanceledBooking()}
+                style={styles.modalButton}
+              >
+                <Text style={styles.modalButtonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <View style={styles.container}>
+        <BottomSheetModal
+          ref={bottomSheetModalRef}
+          snapPoints={snapPoints}
+          enablePanDownToClose
+          backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
+        >
+          <BottomSheetView style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Cancel Booking</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to cancel this booking?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+                onPress={handleCancel}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#f87171" }]}
+                onPress={confirmCanceledBooking}
+              >
+                <Text style={[styles.modalButtonText, { color: "white" }]}>
+                  Confirm
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </BottomSheetView>
+        </BottomSheetModal>
+      </View>
     </SafeAreaView>
   );
 }
@@ -451,8 +764,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "black",
-    minHeight: 160,
     color: "white",
   },
   dot: {
@@ -466,6 +777,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     // marginTop: 10,
+    // position: 'absolute',
+    // top: 200
   },
   containerArea: {
     flex: 1,
@@ -489,28 +802,31 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1A1B25",
-    width: "90%",
-    marginBottom: 10,
+    borderColor: "rgba(255,255,255,0.15)",
+    width: "80%",
     paddingHorizontal: 13,
-    paddingVertical: 5,
-    borderRadius: 10,
+    paddingVertical: Platform.OS === "ios" ? 12 : 0,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#272835",
-  },
-  icon: {
-    marginRight: 10,
+    gap: 5,
+    marginLeft: 10,
+    alignSelf: "center",
+    overflow: "hidden",
   },
   input: {
     flex: 1,
-    color: "white",
+    color: "#fff",
+    fontSize: 14,
+  },
+  icon: {
+    marginRight: 10,
   },
   containerCategory: {
     display: "flex",
     flex: 1,
     flexDirection: "row",
     justifyContent: "space-evenly",
-    marginTop: 20,
+    marginTop: 15,
   },
   switch: {
     marginLeft: 2,
@@ -519,12 +835,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonIconCategory: {
-    borderWidth: 0.1,
-    borderRadius: "100%",
-    padding: 20,
-    backgroundColor: "#FFF8E6",
+    width: 60,
+    height: 60,
+    borderRadius: 30, // setengah dari width/height
+    borderWidth: 1,
+    borderColor: "#FFE5F8",
+    backgroundColor: "#FFE5F8",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 5,
   },
+
   bookingContainer: {
     paddingVertical: 15,
   },
@@ -608,5 +929,128 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#eee",
     marginVertical: 10,
+  },
+  pointsCard: {
+    backgroundColor: "#1A1B25",
+    borderRadius: 15,
+    height: 110,
+    position: "absolute",
+    borderWidth: 0.2,
+    borderColor: "#1A1B25",
+    width: "95%",
+    top: 265,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3.84,
+  },
+  pointItem: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    marginLeft: 10,
+  },
+  pointContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 10,
+    backgroundColor: "#FFE5F8",
+    borderRadius: 20,
+    flexDirection: "row",
+    gap: 10,
+  },
+  pointLabel: {
+    color: "green",
+    fontSize: 10,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+  },
+  pointValue: {
+    color: "black",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  dividerVertical: {
+    width: 1,
+    height: "60%",
+    backgroundColor: "#FFB900",
+    opacity: 0.5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+  },
+  modalContent: {
+    padding: 20,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalButton: {
+     flex: 1,
+    padding: 12,
+    marginHorizontal: 5,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  referralContainer: {
+    borderRadius: 10,
+    alignItems: "center",
+    flexDirection: "row",
+  },
+
+  referralLabel: {
+    fontSize: 12,
+    color: "#555",
+    fontWeight: "bold",
+  },
+
+  referralCode: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFA500",
+  },
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#FFFFFF",
+  },
+  emptyTitle: {
+    fontSize: 18,
+    color: "#555",
+    fontWeight: "600",
+    marginTop: 15,
+    marginBottom: 5,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
+  },
+  contentContainer: {
+    flex: 1,
+    alignItems: "center",
   },
 });

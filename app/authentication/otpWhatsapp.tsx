@@ -1,9 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
+import Constants from 'expo-constants';
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -21,9 +23,12 @@ import {
 } from "react-native";
 import useStore from "../../store/useStore";
 
+const apiUrl = Constants.expoConfig?.extra?.apiUrl
+
+
 const sendOtp = async (formData: any) => {
   const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/send_otp",
+    `${apiUrl}/send_otp`,
     formData,
     {
       headers: {
@@ -36,7 +41,7 @@ const sendOtp = async (formData: any) => {
 
 const verifyOtpUser = async (formData: any) => {
   const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/verify_otp",
+    `${apiUrl}/verify_otp`,
     formData,
     {
       headers: {
@@ -57,13 +62,18 @@ export default function Login() {
   const router = useRouter();
   const setCustomerId = useStore((state) => state.setCustomerId);
   const setHasPin = useStore((state) => state.setHasPin);
+  const [messageOtp, setMessageOtp] = useState("");
+  const { t } = useTranslation();
+  const lang = useStore((state) => state.lang);
+  const setLang = useStore((state) => state.setLang);
+  const setCustomerDetails = useStore((state) => state.setCustomerDetails);
 
   const mutation = useMutation({
     mutationFn: sendOtp,
     onSuccess: (data) => {
-      console.log(data);
-
+      console.log(data.otp);
       if (data.status) {
+        setMessageOtp(data?.otp);
         setShowSuccessModal(true);
         setTimeout(() => {
           setShowSuccessModal(false);
@@ -93,8 +103,18 @@ export default function Login() {
     mutationFn: verifyOtpUser,
     onSuccess: (data) => {
       if (data.status) {
+        console.log(data);
         setCustomerId(data.customerId);
         setHasPin(data.has_pin);
+        setCustomerDetails({
+          fullname: data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname ,
+          email: data?.dataCustomer?.email,
+          phone: data?.dataCustomer?.cellphonenumber,
+          gender: data?.dataCustomer?.sex,
+          dateofbirth: data?.dataCustomer?.dateofbirth,
+          locationCustomerRegister: data?.dataCustomer?.locationid
+        });
+
         if (data.has_pin) {
           router.replace("/tabs/home");
           registerForPushNotificationsAsync().then((token) => {
@@ -140,7 +160,59 @@ export default function Login() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
-          {/* Header Section */}
+          <View style={styles.languageSwitcher}>
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                lang === "id" && styles.languageButtonActive,
+              ]}
+              onPress={() => setLang("id")}
+            >
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  lang === "id" && styles.languageButtonTextActive,
+                ]}
+              >
+                🇮🇩
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                lang === "en" && styles.languageButtonActive,
+              ]}
+              onPress={() => setLang("en")}
+            >
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  lang === "en" && styles.languageButtonTextActive,
+                ]}
+              >
+                🇺🇸
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                lang === "zh" && styles.languageButtonActive,
+              ]}
+              onPress={() => setLang("zh")}
+            >
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  lang === "zh" && styles.languageButtonTextActive,
+                ]}
+              >
+                🇨🇳
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image
@@ -149,11 +221,9 @@ export default function Login() {
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.title}>Selamat Datang</Text>
+            <Text style={styles.title}>{t("welcome")}</Text>
             <Text style={styles.subtitle}>
-              {step === 1
-                ? "Masukkan nomor WhatsApp untuk melanjutkan"
-                : "Masukkan kode verifikasi yang telah dikirim"}
+              {step === 1 ? t("input_whatsapp") : t("input_verification")}
             </Text>
           </View>
 
@@ -161,7 +231,7 @@ export default function Login() {
           <View style={styles.formCard}>
             {step === 1 ? (
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Nomor WhatsApp</Text>
+                <Text style={styles.label}>{t("whatsappNumber")}</Text>
                 <View style={styles.inputWrapper}>
                   <View style={styles.prefixContainer}>
                     <Text style={styles.prefix}>+62</Text>
@@ -178,10 +248,11 @@ export default function Login() {
               </View>
             ) : (
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Kode Verifikasi</Text>
+                <Text style={styles.label}>{t("verificationCode")}</Text>
+
                 <TextInput
                   style={styles.otpInput}
-                  placeholder="Masukkan 6 digit kode"
+                  placeholder={t("enter6DigitCode")}
                   placeholderTextColor="#9ca3af"
                   keyboardType="number-pad"
                   value={otp}
@@ -189,7 +260,9 @@ export default function Login() {
                   textAlign="center"
                   maxLength={6}
                 />
-                <Text style={styles.otpNote}>Kode dikirim ke +62{phone}</Text>
+                <Text style={styles.otpNote}>
+                  {t("codeSentTo")} {phone}
+                </Text>
               </View>
             )}
 
@@ -206,7 +279,7 @@ export default function Login() {
                 <ActivityIndicator color="white" size="small" />
               ) : (
                 <Text style={styles.buttonText}>
-                  {step === 1 ? "Kirim Kode OTP" : "Konfirmasi"}
+                  {step === 1 ? t("sendOtpCode") : t("confirm")}
                 </Text>
               )}
             </TouchableOpacity>
@@ -216,21 +289,24 @@ export default function Login() {
                 style={styles.resendButton}
                 onPress={handleSendOtp}
               >
-                <Text style={styles.resendText}>Tidak menerima kode? </Text>
-                <Text style={styles.resendLink}>Kirim ulang</Text>
+                <Text style={styles.resendText}>{t("didNotReceiveCode")}</Text>
+                <Text style={styles.resendLink}>{t("resend")}</Text>
               </TouchableOpacity>
             )}
           </View>
 
           {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Belum punya akun? </Text>
-            <TouchableOpacity
-              onPress={() => router.push("/authentication/registerUsers")}
-            >
-              <Text style={styles.footerLink}>Daftar</Text>
-            </TouchableOpacity>
-          </View>
+          {step === 1 && (
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>{t("noAccount")}</Text>
+
+              <TouchableOpacity
+                onPress={() => router.push("/authentication/registerUsers")}
+              >
+                <Text style={styles.footerLink}>{t("register")}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Success Modal */}
           <Modal
@@ -244,10 +320,8 @@ export default function Login() {
                 <View style={styles.successIcon}>
                   <Text style={styles.successEmoji}>✅</Text>
                 </View>
-                <Text style={styles.modalTitle}>Berhasil!</Text>
-                <Text style={styles.modalMessage}>
-                  OTP telah dikirim ke nomor WhatsApp Anda
-                </Text>
+                <Text style={styles.modalTitle}>{t("successTitle")}</Text>
+                <Text style={styles.modalMessage}>{t("otpSentMessage")}</Text>
               </View>
             </View>
           </Modal>
@@ -266,13 +340,13 @@ export default function Login() {
                 </View>
                 <Text style={styles.modalTitle}>Oops!</Text>
                 <Text style={styles.modalMessage}>
-                  Harap masukkan nomor WhatsApp terlebih dahulu
+                  {t("pleaseEnterWhatsapp")}
                 </Text>
                 <TouchableOpacity
                   style={styles.modalButton}
                   onPress={() => setShowErrorModal(false)}
                 >
-                  <Text style={styles.modalButtonText}>OK</Text>
+                  <Text style={styles.modalButtonText}>Ok</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -290,22 +364,24 @@ export default function Login() {
                 <View style={styles.confirmIcon}>
                   <Text style={styles.confirmEmoji}>🔐</Text>
                 </View>
-                <Text style={styles.modalTitle}>Konfirmasi</Text>
+                <Text style={styles.modalTitle}>{t("confirm")}</Text>
                 <Text style={styles.modalMessage}>
-                  Apakah Anda yakin ingin memverifikasi kode OTP?
+                  {t("confirmOtpMessage")}
                 </Text>
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
                     style={styles.modalButtonCancel}
                     onPress={() => setShowConfirmModal(false)}
                   >
-                    <Text style={styles.modalButtonCancelText}>Batal</Text>
+                    <Text style={styles.modalButtonCancelText}>
+                      {t("cancel")}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.modalButton}
                     onPress={confirmVerification}
                   >
-                    <Text style={styles.modalButtonText}>Ya, Verifikasi</Text>
+                    <Text style={styles.modalButtonText}>{t("yesVerify")}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -328,8 +404,6 @@ async function registerForPushNotificationsAsync() {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-
-      console.log("Status permission:", finalStatus);
 
       if (finalStatus !== "granted") {
         alert("Gagal mendapatkan permission notifikasi!");
@@ -456,7 +530,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: "#f9fafb",
     fontWeight: "600",
-    letterSpacing: 4,
+    // letterSpacing: 2,
   },
   otpNote: {
     fontSize: 13,
@@ -466,12 +540,12 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 60,
-    backgroundColor: "#FEBA43",
+    backgroundColor: "#B0174C",
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 16,
-    shadowColor: "#FEBA43",
+    shadowColor: "#B0174C",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -500,7 +574,7 @@ const styles = StyleSheet.create({
   },
   resendLink: {
     fontSize: 14,
-    color: "#FEBA43",
+    color: "#B0174C",
     fontWeight: "600",
   },
   footer: {
@@ -514,7 +588,7 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: 14,
-    color: "#FEBA43",
+    color: "#B0174C",
     fontWeight: "600",
   },
   modalOverlay: {
@@ -589,7 +663,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   modalButton: {
-    backgroundColor: "#FEBA43",
+    backgroundColor: "#B0174C",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -617,5 +691,30 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#6b7280",
     textAlign: "center",
+  },
+  languageSwitcher: {
+    position: "absolute",
+    top: 40,
+    right: 24,
+    flexDirection: "row",
+    gap: 8,
+    zIndex: 10,
+  },
+  languageButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+  },
+  languageButtonActive: {
+    backgroundColor: "#B0174C",
+  },
+  languageButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#6b7280",
+  },
+  languageButtonTextActive: {
+    color: "#ffffff",
   },
 });

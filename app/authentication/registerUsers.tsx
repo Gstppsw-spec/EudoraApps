@@ -1,23 +1,70 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import Constants from 'expo-constants';
+import { Image } from "expo-image";
+import { useNavigation, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
+  ActivityIndicator,
   Alert,
+  FlatList,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
-  ScrollView,
-  ActivityIndicator,
-  Pressable,
+  View
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+import Toast from "react-native-toast-message";
+import useStore from "../../store/useStore";
+import HeaderWithBack from "../component/headerWithBack";
+import useClinicDistances from "../hooks/useDistanceToClinic";
+
+const apiUrl = Constants.expoConfig?.extra?.apiUrl
+
+const fetchListClinic = async () => {
+  const res = await fetch(
+    `${apiUrl}/getClinic`
+  );
+  if (!res.ok) throw new Error("Network response was not ok");
+  return res.json();
+};
+
+const sendOtp = async (formData: any) => {
+  const response = await axios.post(
+    `${apiUrl}/send_otpRegister`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  return response.data;
+};
+
+const verifyOtp = async (formData: any) => {
+  const response = await axios.post(
+    `${apiUrl}/verify_otpRegistration`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  return response.data;
+};
 
 export default function Register() {
   const router = useRouter();
@@ -26,342 +73,566 @@ export default function Register() {
     lastname: "",
     phone: "",
     email: "",
-    gender: "FEMALE",
+    gender: "F",
     idNumber: "",
     birthDate: "",
     clinicLocation: "",
-    infoSource: "Rekomendasi",
+    referralCode: "",
+    clinicId: null,
   });
+
+  const genderOptions = [
+    { label: "FEMALE", value: "F" },
+    { label: "MALE", value: "M" },
+  ];
 
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showClinicDropdown, setShowClinicDropdown] = useState(false);
-  const [showInfoSourceDropdown, setShowInfoSourceDropdown] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isClinicModalVisible, setClinicModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { t } = useTranslation();
+  const navigation = useNavigation();
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const setCustomerId = useStore((state) => state.setCustomerId);
+  const setCustomerDetails = useStore((state) => state.setCustomerDetails);
 
-  const clinicOptions = [
-    "Eudora Aesthetic Clinic - Bintaro",
-    "Eudora Aesthetic Clinic - SMS",
-    "Eudora Aesthetic Clinic - Central Park Mall",
-    "Eudora Aesthetic Clinic - Kemang",
-  ];
+  const {
+    data: clinicOptions,
+    error: errorclinic,
+    isLoading: isLoadingclinic,
+    isRefetching,
+    refetch,
+  } = useQuery({
+    queryKey: ["getClinic"],
+    queryFn: fetchListClinic,
+  });
 
-  const infoSourceOptions = [
-    "Rekomendasi",
-    "GUN",
-    "Media Sosial",
-    "Iklan",
-    "Lainnya",
-  ];
+  const {
+    distances,
+    loading: loadingDistance,
+    error,
+  } = useClinicDistances(clinicOptions?.clinicEuodora);
 
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDateChange = (event: any, selectedDate: Date | undefined) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      const day = selectedDate.getDate().toString().padStart(2, "0");
-      const month = (selectedDate.getMonth() + 1).toString().padStart(2, "0");
-      const year = selectedDate.getFullYear();
-      handleChange("birthDate", `${day}/${month}/${year}`);
-    }
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
   };
 
-  const sendOtp = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.post(
-        "https://sys.eudoraclinic.com:84/apieudora/send_otp",
-        {
-          phone: formData.phone,
-          firstname: formData.firstname,
-          lastname: formData.lastname,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
+  };
 
-      if (response.data.status) { console.log(response.data);
-      
-        Alert.alert("Success", "OTP telah dikirim.");
-        setStep(2);
+  const handleConfirm = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    handleChange("birthDate", `${day}/${month}/${year}`);
+    hideDatePicker();
+  };
+
+  const mutation = useMutation({
+    mutationFn: sendOtp,
+    onSuccess: (data) => {
+      Toast.show({
+        type: "success",
+        text2: "Registrasi berhasil, lakukan verifikasi",
+        position: "top",
+        visibilityTime: 2000,
+      });
+      setStep(2);
+    },
+    onError: (error) => {
+      Toast.show({
+        type: "success",
+        text2: "Registrasi gagal",
+        position: "top",
+        visibilityTime: 2000,
+      });
+    },
+  });
+
+  const mutationVerifyOtp = useMutation({
+    mutationFn: verifyOtp,
+    onSuccess: (data) => {
+      if (data.status) {
+        setCustomerId(data.customerId);
+        setCustomerDetails({
+          fullname: data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname ,
+          email: data?.dataCustomer?.email,
+          phone: data?.dataCustomer?.cellphonenumber,
+          gender: data?.dataCustomer?.sex,
+          dateofbirth: data?.dataCustomer?.dateofbirth,
+          locationCustomerRegister: data?.dataCustomer?.locationid
+        });
+        router.replace("/authentication/setPin");
       } else {
-        Alert.alert("Error", response.data.message || "Gagal kirim OTP");
+        Alert.alert("Error", "OTP Salah atau Kadaluarsa");
       }
-    } catch (err: any) {
-      Alert.alert("Error", err?.response?.data?.message || "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
+    },
+    onError: (error) => {
+      Toast.show({
+        type: "success",
+        text2: "Registrasi gagal",
+        position: "top",
+        visibilityTime: 2000,
+      });
+    },
+  });
+
+  const handleSendOtp = () => {
+    if (
+      formData.firstname &&
+      formData.lastname &&
+      formData.clinicLocation &&
+      formData.gender &&
+      formData.phone
+    ) {
+      mutation.mutate(formData);
+    } else {
+      Toast.show({
+        type: "info",
+        text2: "Data belum lengkap",
+        position: "top",
+        visibilityTime: 2000,
+      });
     }
   };
 
-  const verifyOtp = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.post(
-        "https://sys.eudoraclinic.com:84/apieudora/verify_otp",
-        {
-          phone: formData.phone,
-          otp: otp,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-     if (response.data.status) {
-      Alert.alert("Berhasil", "OTP berhasil diverifikasi.");
-router.replace("/authentication/setPin");
-       } else {
-      Alert.alert("Error", "OTP salah atau kadaluarsa");
+  const handleVerifyOtp = () => {
+    if (
+      formData.firstname &&
+      formData.lastname &&
+      formData.clinicLocation &&
+      formData.gender &&
+      formData.phone &&
+      otp?.length === 6
+    ) {
+      const payload = {
+        ...formData,
+        otp: otp,
+      };
+      mutationVerifyOtp.mutate(payload);
+    } else {
+      Toast.show({
+        type: "info",
+        text2: "Digit code kurang dari 6",
+        position: "top",
+        visibilityTime: 2000,
+      });
     }
-  } catch (err: any) {
-    // Handle errors gracefully
-    Alert.alert("Error", err?.response?.data?.message || "Gagal verifikasi OTP");
-  } finally {
-    setLoading(false); // Hide loading indicator
-  }
-};
+  };
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const filteredClinics = clinicOptions?.clinicEuodora?.filter((clinic) =>
+    clinic?.name?.toLowerCase().includes(debouncedQuery.toLowerCase())
+  );
+
+  const sortedClinics = (filteredClinics || [])
+    .map((clinic) => {
+      const distance = distances?.[clinic.id];
+      return {
+        ...clinic,
+        distance: distance ?? Infinity, // kalau jarak belum tersedia, letakkan di akhir
+      };
+    })
+    .sort((a, b) => a.distance - b.distance);
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.container}>
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                <Ionicons name="arrow-back" size={24} color="#1e293b" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Registrasi</Text>
-              <View style={{ width: 24 }} />
-            </View>
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        {step === 1 && <HeaderWithBack title="Register" useGoBack />}
 
-            {step === 1 ? (
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionHeader}>Data Pribadi</Text>
-
-                {/* Semua input field satu per satu ke bawah */}
-                {[
-                  { label: "Nama Depan", key: "firstname", placeholder: "Nama depan" },
-                  { label: "Nama Belakang", key: "lastname", placeholder: "Nama belakang" },
-                  { label: "Nomor WhatsApp", key: "phone", placeholder: "08XXXXXXXXXX", keyboardType: "phone-pad" },
-                  { label: "Email", key: "email", placeholder: "email@contoh.com", keyboardType: "email-address" },
-                  { label: "Nomor KTP", key: "idNumber", placeholder: "Nomor KTP", keyboardType: "number-pad" },
-                ].map((item) => (
-                  <View style={styles.inputGroup} key={item.key}>
-                    <Text style={styles.label}>{item.label}</Text>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          {step === 1 ? (
+            <>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.container}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Nama Depan</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder={item.placeholder}
-                      keyboardType={item.keyboardType || "default"}
-                      value={formData[item.key]}
-                      onChangeText={(text) => handleChange(item.key, text)}
+                      value={formData.firstname}
+                      onChangeText={(text) => handleChange("firstname", text)}
                     />
                   </View>
-                ))}
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Tanggal Lahir</Text>
-                  <Pressable style={styles.input} onPress={() => setShowDatePicker(true)}>
-                    <Text style={formData.birthDate ? styles.dateText : styles.placeholderText}>
-                      {formData.birthDate || "dd/mm/yyyy"}
-                    </Text>
-                  </Pressable>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={new Date()}
-                      mode="date"
-                      display="default"
-                      onChange={handleDateChange}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Nama Belakang</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.lastname}
+                      onChangeText={(text) => handleChange("lastname", text)}
                     />
-                  )}
-                </View>
+                  </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Jenis Kelamin</Text>
-                  <View style={styles.radioGroup}>
-                    {["FEMALE", "MALE"].map((gender) => (
-                      <TouchableOpacity
-                        key={gender}
-                        style={[
-                          styles.radioButton,
-                          formData.gender === gender && styles.radioButtonActive,
-                        ]}
-                        onPress={() => handleChange("gender", gender)}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Whatsapp</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.phone}
+                      onChangeText={(text) => handleChange("phone", text)}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Email</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.email}
+                      onChangeText={(text) => handleChange("email", text)}
+                      keyboardType="email-address"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Nomor KTP</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.idNumber}
+                      onChangeText={(text) => handleChange("idNumber", text)}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Tanggal Lahir</Text>
+                    <Pressable
+                      style={styles.dropdownContainer}
+                      onPress={showDatePicker}
+                    >
+                      <Text
+                        style={
+                          formData.birthDate
+                            ? styles.text
+                            : styles.placeholderText
+                        }
                       >
-                        <Text
-                          style={[
-                            styles.radioText,
-                            formData.gender === gender && styles.radioTextActive,
-                          ]}
-                        >
-                          {gender === "FEMALE" ? "Perempuan" : "Laki-laki"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                        {formData.birthDate || "dd/mm/yyyy"}
+                      </Text>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={20}
+                        color="#64748b"
+                      />
+                    </Pressable>
                   </View>
-                </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Lokasi Klinik</Text>
-                  <Pressable style={styles.input} onPress={() => setShowClinicDropdown(!showClinicDropdown)}>
-                    <Text>{formData.clinicLocation || "Pilih Klinik Terdekat"}</Text>
-                  </Pressable>
-                  {showClinicDropdown && (
-                    <View style={styles.dropdown}>
-                      {clinicOptions.map((option, index) => (
-                        <Pressable
-                          key={index}
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            handleChange("clinicLocation", option);
-                            setShowClinicDropdown(false);
-                          }}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Lokasi Klinik</Text>
+                    <Pressable
+                      style={styles.dropdownContainer}
+                      onPress={() => setClinicModalVisible(true)} // Open the modal
+                    >
+                      <Text style={styles.text}>
+                        {formData.clinicLocation || "Pilih Klinik Terdekat"}
+                      </Text>
+                      <Ionicons name="chevron-down" size={20} color="#64748b" />
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Jenis Kelamin</Text>
+                    <View style={styles.radioRow}>
+                      {genderOptions.map((item) => (
+                        <TouchableOpacity
+                          key={item.value}
+                          style={styles.radioOption}
+                          onPress={() => handleChange("gender", item.value)} // Value = "F" or "M"
                         >
-                          <Text>{option}</Text>
-                        </Pressable>
+                          <View
+                            style={[
+                              styles.radioCircle,
+                              formData.gender === item.value &&
+                                styles.radioCircleSelected,
+                            ]}
+                          />
+                          <Text style={styles.radioLabel}>{item.label}</Text>
+                        </TouchableOpacity>
                       ))}
                     </View>
-                  )}
-                </View>
+                  </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Sumber Informasi</Text>
-                  <Pressable style={styles.input} onPress={() => setShowInfoSourceDropdown(!showInfoSourceDropdown)}>
-                    <Text>{formData.infoSource}</Text>
-                  </Pressable>
-                  {showInfoSourceDropdown && (
-                    <View style={styles.dropdown}>
-                      {infoSourceOptions.map((source, index) => (
-                        <Pressable
-                          key={index}
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            handleChange("infoSource", source);
-                            setShowInfoSourceDropdown(false);
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Kode Referal</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.referralCode}
+                      onChangeText={(text) =>
+                        handleChange("referralCode", text)
+                      }
+                      placeholder="Masukkan kode referal (jika ada)"
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.submitButton}
+                    onPress={handleSendOtp}
+                    disabled={loading || !formData.phone || !formData.firstname}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.buttonText}>{t("register")}</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Calendar Modal */}
+                  <DateTimePickerModal
+                    isVisible={isDatePickerVisible}
+                    mode="date"
+                    date={new Date()}
+                    onConfirm={handleConfirm}
+                    onCancel={hideDatePicker}
+                  />
+
+                  {/* Modal for Clinic Selection */}
+                  <Modal
+                    transparent={true}
+                    animationType="slide"
+                    visible={isClinicModalVisible}
+                    onRequestClose={() => setClinicModalVisible(false)}
+                  >
+                    <View style={styles.modalContainer}>
+                      <View style={styles.modalContent}>
+                        <Text style={styles.headerText}>Pilih Klinik</Text>
+                        <TextInput
+                          style={styles.searchInput}
+                          placeholder="Cari Klinik"
+                          placeholderTextColor={"#000000"}
+                          onChangeText={(text) => setSearchQuery(text)}
+                          value={searchQuery}
+                        />
+
+                        <FlatList
+                          data={sortedClinics}
+                          keyExtractor={(item) => item?.id}
+                          renderItem={({ item }) => {
+                            const distance = distances?.[item.id];
+                            const formattedDistance = loading
+                              ? "Menghitung..."
+                              : distance !== undefined
+                              ? `${distance.toFixed(2)} KM`
+                              : "? KM";
+
+                            return (
+                              <TouchableOpacity
+                                style={styles.modalItem}
+                                onPress={() => {
+                                  handleChange("clinicLocation", item?.name);
+                                  setClinicModalVisible(false);
+                                  handleChange("clinicId", item?.id);
+                                }}
+                              >
+                                <View style={{ flexDirection: "column" }}>
+                                  <Text style={styles.clinicNameText}>
+                                    {item?.name}
+                                  </Text>
+                                  <Text style={styles.clinicDistanceText}>
+                                    JARAK: {formattedDistance}
+                                  </Text>
+                                </View>
+                              </TouchableOpacity>
+                            );
                           }}
-                        >
-                          <Text>{source}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                </View>
+                          initialNumToRender={5}
+                          maxToRenderPerBatch={5}
+                          windowSize={5}
+                          keyboardShouldPersistTaps="handled"
+                        />
 
-                <TouchableOpacity
-                  style={styles.submitButton}
-                  onPress={sendOtp}
-                  disabled={loading || !formData.phone || !formData.firstname}
-                >
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Kirim OTP</Text>}
-                </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.closeButton}
+                          onPress={() => setClinicModalVisible(false)}
+                        >
+                          <Text style={styles.closeButtonText}>Tutup</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
+                </View>
+              </TouchableWithoutFeedback>
+            </>
+          ) : (
+            <>
+              <View style={styles.headerRegis}>
+                <View style={styles.logoContainer}>
+                  <Image
+                    source={require("@/assets/images/logo.jpg")}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.title}>{t("welcome")}</Text>
+                <Text style={styles.subtitle}>
+                  {step === 1 ? t("input_whatsapp") : t("input_verification")}
+                </Text>
               </View>
-            ) : (
-              <View style={styles.otpContainer}>
-                <Text style={styles.otpTitle}>Masukkan Kode OTP</Text>
-                <Text style={styles.otpSubtitle}>Kode OTP telah dikirim ke {formData.phone}</Text>
-                <TextInput
-                  style={styles.otpInput}
-                  placeholder="••••••"
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  value={otp}
-                  onChangeText={setOtp}
-                />
-                <TouchableOpacity
-                  style={styles.submitButton}
-                  onPress={verifyOtp}
-                  disabled={loading || otp.length < 6}
-                >
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verifikasi OTP</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.resendLink} onPress={sendOtp}>
-                  <Text style={styles.resendText}>Tidak menerima kode? Kirim ulang</Text>
-                </TouchableOpacity>
+              <View
+                style={{
+                  flex: 1,
+                  paddingTop: 20,
+                  alignItems: "center",
+                }}
+              >
+                <View style={styles.formCard}>
+                  <View style={styles.formGroup}>
+                    <TextInput
+                      style={styles.otpInput}
+                      placeholder={t("enter6DigitCode")}
+                      placeholderTextColor="#9ca3af"
+                      keyboardType="number-pad"
+                      value={otp}
+                      onChangeText={setOtp}
+                      textAlign="center"
+                      maxLength={6}
+                    />
+                    <Text style={styles.otpNote}>
+                      {t("codeSentTo")} {formData.phone}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    disabled={otp?.length !== 6}
+                    style={[
+                      styles.button,
+                      otp?.length !== 6 && { opacity: 0.3 },
+                    ]}
+                    onPress={handleVerifyOtp}
+                  >
+                    <Text style={styles.buttonText}>{t("confirm")}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.resendButton}
+                    onPress={handleSendOtp}
+                  >
+                    <Text style={styles.resendText}>
+                      {t("didNotReceiveCode")}
+                    </Text>
+                    <Text style={styles.resendLink}>{t("resend")}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.resendButton}
+                    onPress={() => setStep(1)}
+                  >
+                    <Text style={styles.resendLink}>Update Data?</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            )}
-          </View>
-        </TouchableWithoutFeedback>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: { flexGrow: 1, paddingBottom: 40 },
-  container: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: 20 },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
-    marginTop: Platform.OS === "ios" ? 48 : 24,
-  },
-  backButton: { padding: 8 },
-  headerTitle: { fontSize: 20, fontWeight: "700", color: "#1e293b", flex: 1, textAlign: "center" },
-  sectionContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  sectionHeader: { fontSize: 16, fontWeight: "700", color: "#1e293b", marginBottom: 16 },
+  scrollContainer: { flexGrow: 1 },
+  container: { flex: 1, paddingHorizontal: 20, paddingTop: 40, marginBottom: 20 },
   inputGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: "600", color: "#475569", marginBottom: 8 },
   input: {
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    paddingVertical: 12,
     fontSize: 14,
     color: "#1e293b",
   },
   placeholderText: { color: "#9ca3af" },
-  dateText: { color: "#1e293b" },
-  radioGroup: { flexDirection: "row", gap: 12 },
-  radioButton: {
+  text: { color: "#1e293b", fontSize: 14 },
+  dropdownContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    paddingVertical: 12,
+  },
+  backdrop: {
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+  },
+  modalContainer: {
     flex: 1,
-    padding: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+    justifyContent: "center",
     alignItems: "center",
   },
-  radioButtonActive: { backgroundColor: "#FEBA43", borderColor: "#FEBA43" },
-  radioText: { color: "#64748b", fontWeight: "500", fontSize: 14 },
-  radioTextActive: { color: "#fff", fontWeight: "600" },
-  dropdown: {
-    marginTop: 4,
+  modalContent: {
+    width: "90%", // Width of the modal
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    height: "50%",
+    elevation: 5, // Optional shadow for Android
+  },
+  modalHeader: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  headerText: {
+    fontSize: 18,
+    marginBottom: 10,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  searchInput: {
     borderWidth: 1,
     borderColor: "#e2e8f0",
     borderRadius: 8,
-    backgroundColor: "#fff",
-    maxHeight: 200,
+    padding: 10,
+    marginBottom: 10,
+    width: "100%",
   },
-  dropdownItem: {
-    padding: 12,
+  modalItem: {
+    padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
+    borderBottomColor: "#e2e8f0",
   },
+  closeButton: {
+    backgroundColor: "#B0174C",
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  radioRow: { flexDirection: "row", gap: 16, alignItems: "center" },
+  radioOption: { flexDirection: "row", alignItems: "center" },
+  radioCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: "#B0174C",
+    marginRight: 6,
+  },
+  radioCircleSelected: {
+    backgroundColor: "#B0174C",
+  },
+  radioLabel: { fontSize: 14, color: "#1e293b" },
   submitButton: {
-    backgroundColor: "#FEBA43",
+    backgroundColor: "#B0174C",
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
@@ -369,33 +640,137 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  otpContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 24,
-    marginTop: 40,
+  header: {
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    padding: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
   },
-  otpTitle: { fontSize: 18, fontWeight: "700", color: "#1e293b", marginBottom: 8 },
-  otpSubtitle: { fontSize: 14, color: "#64748b", marginBottom: 24, textAlign: "center" },
-  otpInput: {
-    width: "100%",
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 18,
-    color: "#1e293b",
-    letterSpacing: 8,
-    textAlign: "center",
+  headerButton: {
+    padding: 8,
+  },
+  mainHeader: {
+    fontSize: 17,
+    fontWeight: "bold",
+    flex: 1,
+  },
+  formGroup: {
     marginBottom: 24,
   },
-  resendLink: { marginTop: 16 },
-  resendText: { color: "#FEBA43", fontWeight: "600", textAlign: "center", fontSize: 14 },
+  headerRegis: {
+    alignItems: "center",
+    paddingTop: 80,
+  },
+  otpInput: {
+    height: 60,
+    fontSize: 20,
+    color: "#111827",
+    borderWidth: 2,
+    borderColor: "#e5e7eb",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    backgroundColor: "#f9fafb",
+    fontWeight: "600",
+    // letterSpacing: 2,
+    marginTop: 15,
+  },
+  otpNote: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginTop: 15,
+    textAlign: "center",
+  },
+  button: {
+    height: 60,
+    backgroundColor: "#B0174C",
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    // marginTop: 16,
+    shadowColor: "#B0174C",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  resendButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 24,
+    padding: 8,
+  },
+  resendText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  resendLink: {
+    fontSize: 14,
+    color: "#B0174C",
+    fontWeight: "600",
+  },
+  formCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    width: "90%",
+    maxWidth: 400, // ✅ biar tidak terlalu lebar di tablet
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+
+  logoContainer: {
+    width: 80,
+    height: 80,
+    backgroundColor: "#ffffff",
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  logoImage: {
+    width: 60,
+    height: 60,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#1f2937",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6b7280",
+    textAlign: "center",
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  clinicNameText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+
+  clinicDistanceText: {
+    fontSize: 14,
+    color: "#888",
+    marginTop: 2,
+  },
 });

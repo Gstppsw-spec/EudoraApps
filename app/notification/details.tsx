@@ -5,11 +5,13 @@ import {
   Alert,
   Animated,
   Easing,
+  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import HeaderWithBack from '../component/headerWithBack';
 
 const NotificationDetail = () => {
   const params = useLocalSearchParams();
@@ -88,7 +90,13 @@ const NotificationDetail = () => {
   };
 
   return (
+
+    <SafeAreaView style={{flex: 1}}>
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <HeaderWithBack
+        title="Detail Nofitication"
+        useGoBack
+      />
       <Animated.ScrollView 
         contentContainerStyle={styles.scrollContent}
         style={{ transform: [{ scale: scaleAnim }] }}
@@ -125,6 +133,7 @@ const NotificationDetail = () => {
         </TouchableOpacity>
       </View>
     </Animated.View>
+    </SafeAreaView>
   );
 };
 
@@ -132,6 +141,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F8F8',
+    
   },
   header: {
     flexDirection: 'row',
@@ -142,6 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#EEEEEE',
+    
   },
   backButton: {
     marginRight: 15,

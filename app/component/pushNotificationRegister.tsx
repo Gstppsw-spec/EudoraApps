@@ -1,13 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
+import Constants from 'expo-constants';
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useEffect } from "react";
 import useStore from "../../store/useStore";
 
+const apiUrl = Constants.expoConfig?.extra?.apiUrl
+
 const sendTokenNotification = async (formData: any) => {
   const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/save_push_token",
+    `${apiUrl}/save_push_token`,
     formData,
     {
       headers: {
@@ -23,27 +26,17 @@ export default function PushNotificationRegister() {
   const hasPin = useStore((state) => state.hasPin);
 
   const mutation = useMutation({
-    mutationFn: sendTokenNotification,
-    onSuccess: (data) => {
-      console.log("✅ Token berhasil dikirim ke server:", data);
-    },
-    onError: (error) => {
-      console.error("❌ Error posting token:", error);
-    },
+    mutationFn: sendTokenNotification
   });
 
   useEffect(() => {
     if (customerId && hasPin) {
       registerForPushNotificationsAsync().then((token) => {
         if (token) {
-          console.log("✅ Expo Push Token:", token);
           mutation.mutate({
             customerid: customerId,
             push_token: token,
           });
-        }else{
-            console.log('notoken');
-            
         }
       });
     }
@@ -54,11 +47,11 @@ export default function PushNotificationRegister() {
 async function registerForPushNotificationsAsync() {
   try {
     if (!Device.isDevice) {
-      alert("Harus dijalankan di perangkat fisik!");
       return null;
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
     if (existingStatus !== "granted") {
@@ -70,10 +63,13 @@ async function registerForPushNotificationsAsync() {
       return null;
     }
 
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    const token = (
+      await Notifications.getExpoPushTokenAsync({
+        projectId: "984b7594-fc42-4a01-9042-c76436228bf1",
+      })
+    ).data;
     return token;
   } catch (error) {
-    console.error("❌ Error saat register notifikasi:", error);
     return null;
   }
 }

@@ -1,67 +1,61 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Link } from "expo-router"; // Import the Link component from expo-router
-import React, { useEffect, useState } from "react";
+import * as Notifications from "expo-notifications";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
-  Modal,
   RefreshControl,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+// import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import Constants from "expo-constants";
+import { StatusBar } from "react-native";
+import Toast from "react-native-toast-message";
 import useStore from "../../store/useStore";
+import HeaderWithBack from "../component/headerWithBack";
+
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const fetchListBooking = async ({ queryKey }: any) => {
   const [, customerId] = queryKey;
-  const res = await fetch(
-    `https://sys.eudoraclinic.com:84/apieudora/getListBooking/${customerId}/1`
-  );
+  const res = await fetch(`${apiUrl}/getListBooking/${customerId}/1`);
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
 const fetchListBookingCompleted = async ({ queryKey }: any) => {
   const [, customerId] = queryKey;
-  const res = await fetch(
-    `https://sys.eudoraclinic.com:84/apieudora/getListBooking/${customerId}/3`
-  );
+  const res = await fetch(`${apiUrl}/getListBooking/${customerId}/3`);
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
 const fetchListBookingCanceled = async ({ queryKey }: any) => {
   const [, customerId] = queryKey;
-  const res = await fetch(
-    `https://sys.eudoraclinic.com:84/apieudora/getListBooking/${customerId}/2`
-  );
+  const res = await fetch(`${apiUrl}/getListBooking/${customerId}/2`);
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
 const canceledBooking = async (formData: any) => {
-  const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/canceledBooking",
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/canceledBooking`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
 const MyBookingUpcoming = () => {
-  const [modalVisible, setModalVisible] = useState(false); // Manage the modal visibility
-  const [currentBooking, setCurrentBooking] = useState(null); // Store current booking to cancel
-  const navigation = useNavigation();
+  const [currentBooking, setCurrentBooking] = useState(null);
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const queryClient = useQueryClient();
   const [switchStates, setSwitchStates] = useState<boolean[]>([]);
@@ -69,20 +63,21 @@ const MyBookingUpcoming = () => {
   const [mode, setMode] = useState<"upcoming" | "completed" | "canceled">(
     "upcoming"
   );
+  const { addReminder, removeReminder } = useStore();
 
-  // Function to handle Cancel Booking button click
-  const handleCancelBooking = (
-    booking: string | React.SetStateAction<null>
-  ) => {
-    setCurrentBooking(booking); // Set the current booking to cancel
-    setModalVisible(true); // Show the confirmation modal
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["35%", "50%"], []);
+
+  const handlePresentModalPress = useCallback((bookingId: number) => {
+    setCurrentBooking(bookingId);
+    bottomSheetModalRef.current?.present();
+  }, []);
+
+  const handleCancel = () => {
+    setCurrentBooking(null);
+    bottomSheetModalRef.current?.dismiss();
   };
 
-  // Function to handle modal dismiss
-  const cancelModal = () => {
-    setModalVisible(false); // Hide modal without canceling
-    setCurrentBooking(null); // Reset current booking
-  };
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["getListBooking", customerId],
@@ -102,9 +97,6 @@ const MyBookingUpcoming = () => {
     enabled: !!customerId,
   });
 
-  
-  
-
   const {
     data: dataCanceled,
     isLoading: isLoadingCanceled,
@@ -117,36 +109,100 @@ const MyBookingUpcoming = () => {
     enabled: !!customerId,
   });
 
-  console.log(dataCanceled);
-
   const mutation = useMutation({
     mutationFn: canceledBooking,
     onSuccess: (data) => {
-      // setModalVisible(true);
+      removeReminder(currentBooking);
+      setCurrentBooking(null);
+      bottomSheetModalRef.current?.dismiss();
+      Toast.show({
+        type: "success",
+        text2: "Appointment berhsil dicancel!",
+        position: "top",
+        visibilityTime: 2000,
+      });
       queryClient.invalidateQueries(["getListBooking", customerId]);
+
     },
     onError: (error) => {
+      setCurrentBooking(null);
+      bottomSheetModalRef.current?.dismiss();
+      Toast.show({
+        type: "error",
+        text2: "Appointment gagal dicancel!",
+        position: "top",
+        visibilityTime: 2000,
+      });
       console.error("Error posting data:", error);
     },
   });
 
   useEffect(() => {
-    if (data?.customerbooking) {
-      setSwitchStates(data.customerbooking.map(() => false));
-    }
+    if (!data?.customerbooking) return;
+    const { isReminderActive } = useStore.getState();
+    const newSwitchStates = data.customerbooking.map((booking) =>
+      isReminderActive(booking.BOOKINGID)
+    );
+    setSwitchStates(newSwitchStates);
   }, [data]);
 
   const toggleSwitch = (index: number) => {
+    if (!data?.customerbooking) return;
+
+    const booking = data.customerbooking[index];
+    const wasEnabled = switchStates[index];
+    const willBeEnabled = !wasEnabled;
     setSwitchStates((prevState) => {
       const updated = [...prevState];
-      updated[index] = !updated[index];
+      updated[index] = willBeEnabled;
+
       return updated;
     });
+    if (willBeEnabled) {
+      const dateOnly = new Date(booking.TREATMENTDATE.split(" ")[0]);
+      dateOnly.setHours(0, 0, 0, 0);
+      const bookingDateTime = new Date(
+        booking.TREATMENTDATE.replace(" ", "T").split("T")[0] +
+          "T" +
+          booking.TIME +
+          ":00"
+      );
+      const twoHoursBefore = new Date(
+        bookingDateTime.getTime() - 2 * 60 * 60 * 1000
+      );
+
+      const now = new Date();
+      if (dateOnly > now) {
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Hari ini kamu ada booking!",
+            body: `${booking.SERVICE} di ${booking.LOCATIONNAME}`,
+            sound: true,
+          },
+          trigger: { type: "date", date: dateOnly },
+        });
+      }
+
+      if (twoHoursBefore > now) {
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Kamu ada appointment 2 jam lagi!",
+            body: `${booking.SERVICE} jam ${booking.TIME} di ${booking.LOCATIONNAME}`,
+            sound: true,
+          },
+          trigger: { type: "date", date: twoHoursBefore },
+        });
+      }
+
+      addReminder(booking.BOOKINGID);
+    } else {
+      removeReminder(booking.BOOKINGID);
+    }
   };
 
-  const handleCanceledBooking = (bookingId: number) => {
+  const confirmCanceledBooking = () => {
     mutation.mutate({
-      bookingId: bookingId,
+      bookingId: currentBooking,
     });
   };
 
@@ -158,16 +214,12 @@ const MyBookingUpcoming = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.mainHeader}>HISTORY BOOKING</Text>
-      </View>
+      <HeaderWithBack title="History Treatment" useGoBack />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, mode === "upcoming" && styles.activeTab]}
@@ -235,90 +287,92 @@ const MyBookingUpcoming = () => {
             ) : error ? (
               <Text>Error..</Text>
             ) : data?.customerbooking?.length > 0 ? (
-              data.customerbooking
-                .slice(0, 3)
-                .map((booking: any, index: number) => {
-                  const formattedDate = new Date(
-                    booking.TREATMENTDATE.replace(" ", "T")
-                  ).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  });
-                  return (
-                    <View
-                      style={{
-                        borderWidth: 1,
-                        borderRadius: 10,
-                        paddingHorizontal: 10,
-                        borderColor: "#ECEFF3",
-                        marginBottom: 10,
-                      }}
-                      key={index}
-                    >
-                      <View style={styles.bookingContainer}>
-                        <View
-                          style={{
-                            display: "flex",
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <Text style={styles.dateText}>
-                            {formattedDate} ({booking.TIME})
-                          </Text>
-                          <View style={styles.remindButton}>
-                            <Text style={styles.remindText}>Remind me</Text>
-                            <Switch
-                              style={styles.switch}
-                              trackColor={{ false: "#ccc", true: "#FFB900" }}
-                              thumbColor={isEnabled ? "#fff" : "#fff"}
-                              ios_backgroundColor="#ccc"
-                              onValueChange={() => toggleSwitch(index)}
-                              value={switchStates[index]}
-                            />
-                          </View>
-                        </View>
-                        <View style={styles.divider} />
-                        <View style={styles.row}>
-                          <Image
-                            source={{
-                              uri: `https://sys.eudoraclinic.com:84/apieudora/upload/${booking.IMAGE}`,
-                            }}
-                            style={styles.clinicImage}
+              data.customerbooking.map((booking: any, index: number) => {
+                const formattedDate = new Date(
+                  booking.TREATMENTDATE.replace(" ", "T")
+                ).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                });
+                return (
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderRadius: 10,
+                      paddingHorizontal: 10,
+                      borderColor: "#ECEFF3",
+                      marginBottom: 10,
+                    }}
+                    key={index}
+                  >
+                    <View style={styles.bookingContainer}>
+                      <View
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={styles.dateText}>
+                          {formattedDate} ({booking.TIME})
+                        </Text>
+                        <View style={styles.remindButton}>
+                          <Text style={styles.remindText}>Remind me</Text>
+                          <Switch
+                            style={styles.switch}
+                            trackColor={{ false: "#ccc", true: "#B0174C" }}
+                            thumbColor={isEnabled ? "#fff" : "#fff"}
+                            ios_backgroundColor="#ccc"
+                            onValueChange={() => toggleSwitch(index)}
+                            value={switchStates[index]}
                           />
-                          <View style={styles.bookingDetails}>
-                            <Text style={styles.clinicName}>
-                              {booking.LOCATIONNAME}
-                            </Text>
-                            <Text style={styles.clinicAddress}>
-                              {booking.ADDRESS}
-                            </Text>
-                            <Text style={styles.servicesTitle}>Services:</Text>
-                            <Text style={styles.servicesText}>
-                              {booking.SERVICE}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.actionButtons}>
-                          <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={() =>
-                              handleCanceledBooking(booking.BOOKINGID)
-                            }
-                          >
-                            <Text style={styles.cancelText}>
-                              Cancel Booking
-                            </Text>
-                          </TouchableOpacity>
                         </View>
                       </View>
+                      <View style={styles.divider} />
+                      <View style={styles.row}>
+                        <Image
+                          source={{
+                            uri: `${apiUrl}/upload/${booking.IMAGE}`,
+                          }}
+                          style={styles.clinicImage}
+                        />
+                        <View style={styles.bookingDetails}>
+                          <Text style={styles.clinicName}>
+                            {booking.LOCATIONNAME}
+                          </Text>
+                          <Text style={styles.clinicAddress}>
+                            {booking.ADDRESS}
+                          </Text>
+                          <Text style={styles.servicesTitle}>Services:</Text>
+                          <Text style={styles.servicesText}>
+                            {booking.SERVICE}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.actionButtons}>
+                        <TouchableOpacity
+                          style={styles.cancelButton}
+                          onPress={() =>
+                            handlePresentModalPress(booking.BOOKINGID)
+                          }
+                        >
+                          <Text style={styles.cancelText}>Cancel Booking</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  );
-                })
+                  </View>
+                );
+              })
             ) : (
-              <Text>Tidak ada data...</Text>
+              <View style={styles.emptyContainer}>
+                <Ionicons name="medkit-outline" size={60} color="#E0E0E0" />
+                <Text style={styles.emptyTitle}>No History found</Text>
+                <Text style={styles.emptySubtitle}>
+                  You don't have any upcoming appointment yet
+                </Text>
+              </View>
             )}
           </View>
         ) : mode == "completed" ? (
@@ -367,23 +421,12 @@ const MyBookingUpcoming = () => {
                           <Text style={styles.dateText}>
                             {formattedDate} ({booking.TIME})
                           </Text>
-                          {/* <View style={styles.remindButton}>
-                            <Text style={styles.remindText}>Remind me</Text>
-                            <Switch
-                              style={styles.switch}
-                              trackColor={{ false: "#ccc", true: "#FFB900" }}
-                              thumbColor={isEnabled ? "#fff" : "#fff"}
-                              ios_backgroundColor="#ccc"
-                              onValueChange={() => toggleSwitch(index)}
-                              value={switchStates[index]}
-                            />
-                          </View> */}
                         </View>
                         <View style={styles.divider} />
                         <View style={styles.row}>
                           <Image
                             source={{
-                              uri: `https://sys.eudoraclinic.com:84/apieudora/upload/${booking.IMAGE}`,
+                              uri: `${apiUrl}/upload/${booking.IMAGE}`,
                             }}
                             style={styles.clinicImage}
                           />
@@ -400,25 +443,19 @@ const MyBookingUpcoming = () => {
                             </Text>
                           </View>
                         </View>
-                        {/* <View style={styles.actionButtons}>
-                          <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={() =>
-                              handleCanceledBooking(booking.BOOKINGID)
-                            }
-                          >
-                            <Text style={styles.cancelText}>
-                              Cancel Booking
-                            </Text>
-                          </TouchableOpacity>
-                        </View> */}
                       </View>
                     </View>
                   );
                 }
               )
             ) : (
-              <Text>Tidak ada data...</Text>
+              <View style={styles.emptyContainer}>
+                <Ionicons name="medkit-outline" size={60} color="#E0E0E0" />
+                <Text style={styles.emptyTitle}>No History found</Text>
+                <Text style={styles.emptySubtitle}>
+                  You don't have any treatment history yet
+                </Text>
+              </View>
             )}
           </View>
         ) : (
@@ -467,23 +504,12 @@ const MyBookingUpcoming = () => {
                           <Text style={styles.dateText}>
                             {formattedDate} ({booking.TIME})
                           </Text>
-                          {/* <View style={styles.remindButton}>
-                            <Text style={styles.remindText}>Remind me</Text>
-                            <Switch
-                              style={styles.switch}
-                              trackColor={{ false: "#ccc", true: "#FFB900" }}
-                              thumbColor={isEnabled ? "#fff" : "#fff"}
-                              ios_backgroundColor="#ccc"
-                              onValueChange={() => toggleSwitch(index)}
-                              value={switchStates[index]}
-                            />
-                          </View> */}
                         </View>
                         <View style={styles.divider} />
                         <View style={styles.row}>
                           <Image
                             source={{
-                              uri: `https://sys.eudoraclinic.com:84/apieudora/upload/${booking.IMAGE}`,
+                              uri: `${apiUrl}/upload/${booking.IMAGE}`,
                             }}
                             style={styles.clinicImage}
                           />
@@ -500,60 +526,53 @@ const MyBookingUpcoming = () => {
                             </Text>
                           </View>
                         </View>
-                        {/* <View style={styles.actionButtons}>
-                          <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={() =>
-                              handleCanceledBooking(booking.BOOKINGID)
-                            }
-                          >
-                            <Text style={styles.cancelText}>
-                              Cancel Booking
-                            </Text>
-                          </TouchableOpacity>
-                        </View> */}
                       </View>
                     </View>
                   );
                 }
               )
             ) : (
-              <Text>Tidak ada data...</Text>
+              <View style={styles.emptyContainer}>
+                <Ionicons name="medkit-outline" size={60} color="#E0E0E0" />
+                <Text style={styles.emptyTitle}>No History found</Text>
+                <Text style={styles.emptySubtitle}>
+                  You don't have any canceled booking
+                </Text>
+              </View>
             )}
           </View>
         )}
       </ScrollView>
 
-      {/* Confirmation Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={cancelModal} // Close on back button
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cancel Booking</Text>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to cancel this booking?
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={cancelModal}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <Link
-                href="/tabs/clinic/bookingcancel"
-                style={styles.modalButton}
-              >
-                <Text style={styles.modalButtonText}>Confirm</Text>
-              </Link>
-            </View>
+        <BottomSheetView style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Cancel Booking</Text>
+          <Text style={styles.modalMessage}>
+            Are you sure you want to cancel this booking?
+          </Text>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+              onPress={handleCancel}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: "#f87171" }]}
+              onPress={confirmCanceledBooking}
+            >
+              <Text style={[styles.modalButtonText, { color: "white" }]}>
+                Confirm
+              </Text>
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        </BottomSheetView>
+      </BottomSheetModal>
     </SafeAreaView>
   );
 };
@@ -586,14 +605,14 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: "#FFB900",
+    borderBottomColor: "#B0174C",
   },
   tabText: {
     fontSize: 16,
     color: "#666",
   },
   activeTabText: {
-    color: "#FFB900",
+    color: "#B0174C",
     fontWeight: "bold",
   },
   content: {
@@ -672,11 +691,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: "#FFB900",
+    borderColor: "#B0174C",
     borderRadius: 5,
   },
   receiptText: {
-    color: "#FFB900",
+    color: "#B0174C",
     fontWeight: "bold",
   },
   divider: {
@@ -684,48 +703,35 @@ const styles = StyleSheet.create({
     backgroundColor: "#eee",
     marginVertical: 10,
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
-  },
   modalContent: {
-    width: "80%",
-    backgroundColor: "white",
-    borderRadius: 10,
     padding: 20,
     alignItems: "center",
-    elevation: 5, // Shadow effect on modal
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   modalMessage: {
-    fontSize: 16,
+    fontSize: 14,
     marginBottom: 20,
-    textAlign: "center",
+    textAlign: 'center',
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: "100%",
   },
   modalButton: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "#FFB900",
+     flex: 1,
+    padding: 12,
     marginHorizontal: 5,
-    justifyContent: "center",
-    alignItems: "center",
+    borderRadius: 8,
+    alignItems: 'center',
   },
   modalButtonText: {
-    color: "#FFB900",
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: '600',
   },
   header: {
     flexDirection: "row",
@@ -745,6 +751,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
     flex: 1,
     marginLeft: -50,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+    backgroundColor: "#FFFFFF",
+  },
+  emptyTitle: {
+    fontSize: 18,
+    color: "#555",
+    fontWeight: "600",
+    marginTop: 15,
+    marginBottom: 5,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
   },
 });
 

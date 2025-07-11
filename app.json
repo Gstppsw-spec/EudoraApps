@@ -1,33 +1,43 @@
+
 {
   "expo": {
     "name": "DashboardCustomerEudora",
     "slug": "DashboardCustomerEudora",
     "owner": "gstp_psw15",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
     "scheme": "dashboardcustomereudora",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "runtimeVersion": {
         "policy": "appVersion"
+      },
+      "bundleIdentifier": "com.anonymous.DashboardCustomerEudora",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Aplikasi ini membutuhkan akses lokasi Anda."
+      },
+      "icon": {
+        "dark":"./assets/icons/ios-dark.png",
+        "light": "./assets/icons/ios-light.png",
+        "tinted": "./assets/icons/ios-tinted.png"
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.DashboardCustomerEudora",
       "permissions": [
-        "NOTIFICATIONS"
+        "NOTIFICATIONS",
+        "ACCESS_FINE_LOCATION"
       ],
-      "runtimeVersion": "1.0.0",
-      "googleServicesFile": "./android/app/google-services.json",
-      "useNextNotificationsApi": true
+      "runtimeVersion": "1.0.1",
+      "googleServicesFile": "./config/firebase/google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -39,14 +49,21 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/icons/splash-icon-dark.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#ffffff",
+          "dark": {
+              "image":"./assets/icons/splash-icon-light.png",
+              "backgroundColor":"#000000"
+          },
+          "imageWidth": 200
         }
       ],
-      ["expo-notifications"]
-    ],
+      [
+        "expo-notifications"
+      ]
+    ]
+    ,
     "experiments": {
       "typedRoutes": true
     },
@@ -54,7 +71,9 @@
       "router": {},
       "eas": {
         "projectId": "984b7594-fc42-4a01-9042-c76436228bf1"
-      }
+      },
+      "apiUrl": "https://sys.eudoraclinic.com:84/apieudora",
+      "apiKey": "AIzaSyCUQu4oNuj856ndXkBxpmb71zwE4bPHE9I"
     },
     "updates": {
       "url": "https://u.expo.dev/984b7594-fc42-4a01-9042-c76436228bf1"

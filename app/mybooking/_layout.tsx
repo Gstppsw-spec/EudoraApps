@@ -1,15 +1,14 @@
 import { Stack } from 'expo-router';
+import useAuthGuard from '../hooks/useAuthGuard';
 
 export default function RootLayout() {
+  useAuthGuard();
   return (
     <Stack>
-      <Stack.Screen name="mybooking" options={{
+      <Stack.Screen name="myBooking" options={{
         headerShown: false,
         gestureEnabled: true,
       }}/>
-      {/* <Stack.Screen name="details" options={{
-        title: 'Detail Notification'
-      }}/> */}
     </Stack>
   );
 }

@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
+import Constants from 'expo-constants';
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -16,9 +17,12 @@ import {
 } from "react-native";
 import useStore from "../../store/useStore";
 
+const apiUrl = Constants.expoConfig?.extra?.apiUrl
+
+
 const verifyPinUsers = async (formData: any) => {
   const response = await axios.post(
-    "https://sys.eudoraclinic.com:84/apieudora/verify_pin",
+    `${apiUrl}/verify_pin`,
     formData,
     {
       headers: {
@@ -75,7 +79,6 @@ export default function VerifyPin() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
-          <Text style={styles.title}>Masukkan PIN Anda</Text>
           <Text style={styles.instruction}>
             Untuk keamanan, silakan masukkan PIN 6 digit Anda
           </Text>
@@ -88,6 +91,7 @@ export default function VerifyPin() {
             maxLength={6}
             value={pin}
             onChangeText={setPin}
+            placeholderTextColor={'black'}
           />
 
           <TouchableOpacity
@@ -112,7 +116,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#FFB900",
+    color: "#B0174C",
     textAlign: "center",
     marginBottom: 10,
   },
@@ -124,16 +128,17 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#FFB900",
+    borderColor: "#B0174C",
     borderRadius: 10,
     padding: 12,
     fontSize: 18,
     textAlign: "center",
     letterSpacing: 5,
     marginBottom: 20,
+    color: 'black'
   },
   button: {
-    backgroundColor: "#FFB900",
+    backgroundColor: "#B0174C",
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",

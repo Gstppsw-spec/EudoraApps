@@ -1,0 +1,54 @@
+# Umum
+node_modules
+npm-debug.log
+yarn-error.log
+.expo
+.expo-shared
+*.tar.gz
+*.log
+*.tmp
+
+# Android (abaikan seluruh folder agar tetap prebuild)
+android
+
+# iOS (abaikan seluruh folder agar tetap prebuild)
+ios
+
+# Git & Docs
+.git
+.gitignore
+README.md
+LICENSE
+docs/
+
+# Test/Mock Files
+*.test.*
+*.spec.*
+__tests__/
+__mocks__/
+jest.config.*
+coverage/
+
+# Assets Dummy (optional)
+assets/mock/
+assets/sample/
+assets/dummy/
+*.psd
+*.xcf
+
+# Environment & Config
+.env
+.env.*
+*.key
+*.pem
+
+# VSCode & IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build Output
+web-build/
+dist/
+build/

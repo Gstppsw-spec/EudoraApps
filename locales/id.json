@@ -1,0 +1,22 @@
+{
+  "welcome": "Selamat Datang",
+  "login": "Masuk",
+  "input_whatsapp": "Masukkan nomor WhatsApp untuk melanjutkan",
+  "input_verification": "Masukkan kode verifikasi yang telah dikirim",
+  "sendOtpCode": "Kirim Kode OTP",
+  "confirm": "Konfirmasi",
+  "didNotReceiveCode": "Tidak menerima kode? ",
+  "resend": "Kirim ulang",
+  "confirmOtpMessage": "Apakah Anda yakin ingin memverifikasi kode OTP?",
+   "cancel": "Cancel",
+   "yesVerify": "Ya, Verifikasi",
+   "pleaseEnterWhatsapp": "Harap masukkan nomor WhatsApp terlebih dahulu",
+   "successTitle": "Berhasil!",
+    "otpSentMessage": "OTP telah dikirim ke nomor WhatsApp Anda",
+    "noAccount": "Belum punya akun? ",
+    "register": "Daftar",
+    "codeSentTo": "Kode dikirim ke ",
+    "verificationCode": "Kode Verifikasi",
+    "whatsappNumber": "Nomor WhatsApp",
+    "enter6DigitCode": "Masukkan 6 digit kode"
+}

@@ -1,29 +1,31 @@
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { Link } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
-  Image,
+  RefreshControl,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
+import useClinicDistances from "@/app/hooks/useDistanceToClinic";
 import { useQuery } from "@tanstack/react-query";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
+import useStore from "../../../store/useStore";
 
-const fetchUsers = async () => {
-  const res = await fetch("https://jsonplaceholder.typicode.com/users");
-  if (!res.ok) throw new Error("Network response was not ok");
-  return res.json();
-};
+import Constants from 'expo-constants';
+const apiUrl = Constants.expoConfig?.extra?.apiUrl 
+
 
 const fetchListClinic = async () => {
   const res = await fetch(
-    "https://sys.eudoraclinic.com:84/apieudora/getClinic"
+    `${apiUrl}/getClinic`
   );
   if (!res.ok) throw new Error("Network response was not ok");
   return res.json();
@@ -31,101 +33,120 @@ const fetchListClinic = async () => {
 
 const IndexScreen: React.FC = () => {
   const navigation = useNavigation();
-
-  const handleSearchPress = () => {
-    // navigation.navigate("SearchScreen");
-  };
-
-  const { data, error, isLoading } = useQuery({
-    queryKey: ["users"],
-    queryFn: fetchUsers,
-  });
+  const setLocationId = useStore((state) => state.setLocationId);
 
   const {
     data: dataclinic,
     error: errorclinic,
     isLoading: isLoadingclinic,
+    isRefetching,
+    refetch,
   } = useQuery({
     queryKey: ["getClinic"],
     queryFn: fetchListClinic,
   });
 
+  const { distances, loading, error } = useClinicDistances(dataclinic?.clinicEuodora);
+
+  const onRefresh = () => {
+    refetch();
+  };
+
   if (isLoadingclinic) {
-      return (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" />
-        </View>
-      );
-    }
-  
-    if (errorclinic) {
-      return (
-        <View style={styles.center}>
-          <Text>Error loading messages: {errorclinic.message}</Text>
-        </View>
-      );
-    }
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (errorclinic) {
+    return (
+      <View style={styles.center}>
+        <Text>Error loading messages: {errorclinic.message}</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
         <Text style={styles.mainHeader}>OUR CLINIC</Text>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={handleSearchPress}
-        >
-          <FontAwesome name="search" size={20} color="black" />
-        </TouchableOpacity>
       </View>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
 
-      <ScrollView style={styles.scrollContainer}>
+      <ScrollView
+        style={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
+        }
+      >
         {isLoadingclinic ? (
           <Text>Loading...</Text>
         ) : errorclinic ? (
           <Text>Terjadi kesalahan saat mengambil data</Text>
         ) : (
-          dataclinic.clinicEuodora.map((clinic: any, index: number) => (
-            <View key={index} style={styles.clinicCardContainer}>
-              <Link
-                href={{ pathname: "/tabs/clinic/details", params: clinic }}
-                asChild
-              >
-                <TouchableOpacity style={styles.clinicCard}>
-                  <Image
-                    source={{
-                      uri: `https://sys.eudoraclinic.com:84/apieudora/upload/${clinic.image}`,
-                    }}
-                    style={styles.clinicImage}
-                  />
-
-                  <View style={styles.clinicInfo}>
-                    <Text style={styles.clinicName}>{clinic.name}</Text>
-                    <Text style={styles.clinicAddress}>{clinic.address}</Text>
-                    <View style={styles.distanceRatingContainer}>
-                      <Text style={styles.distanceText}>{clinic.distance}</Text>
-                      <FontAwesome
-                        name="arrow-up"
-                        size={12}
-                        color="#4CAF50"
-                        style={styles.arrowIcon}
+          dataclinic.clinicEuodora.map((clinic: any, index: number) => {
+            return (
+              <View key={index} style={styles.clinicCardContainer}>
+                <Link
+                  href={{ pathname: "/tabs/clinic/details", params: clinic }}
+                  onPress={() => setLocationId(clinic.id)}
+                  asChild
+                >
+                  <TouchableOpacity style={styles.clinicCard}>
+                    <View>
+                      <Image
+                        source={{
+                          uri: `${apiUrl}/upload/${clinic.image}`,
+                        }}
+                        style={styles.clinicImage}
                       />
-                      <Text style={styles.ratingText}>{clinic.rating}</Text>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              </Link>
-              {index < dataclinic.clinicEuodora.length - 1 && (
-                <View style={styles.divider} />
-              )}
-            </View>
-          ))
+                    <View>
+                      <View style={styles.clinicInfo}>
+                        <Text style={styles.clinicName}>{clinic.name}</Text>
+                        <Text style={styles.clinicAddress}>
+                          {clinic.address}
+                        </Text>
+                        <View style={styles.distanceRatingContainer}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                            }}
+                          >
+                            <FontAwesome
+                              name="whatsapp"
+                              size={12}
+                              color="#4CAF50"
+                              style={styles.arrowIcon}
+                            />
+                            <Text style={styles.ratingText}>
+                              {clinic.mobilephone}
+                            </Text>
+                          </View>
+                          <Text style={styles.distanceText}>
+                            {loading
+                              ? "Menghitung..."
+                              : `${distances[clinic.id]?.toFixed(2) ?? "?"} KM`}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </Link>
+                {index < dataclinic.clinicEuodora.length - 1 && (
+                  <View style={styles.divider} />
+                )}
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
@@ -141,10 +162,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 10,
-    // paddingTop: 50,
+    padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
+    paddingTop: StatusBar.currentHeight,
   },
   headerButton: {
     padding: 8,
@@ -163,32 +184,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   clinicCard: {
-    flexDirection: "row",
     paddingVertical: 16,
   },
   clinicImage: {
-    width: 80,
-    height: 80,
     borderRadius: 8,
     marginRight: 16,
+    width: "100%",
+    height: 120,
+    resizeMode: "cover",
   },
   clinicInfo: {
     flex: 1,
     justifyContent: "center",
   },
   clinicName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginVertical: 8,
   },
   clinicAddress: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
     marginBottom: 8,
   },
   distanceRatingContainer: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
   },
   distanceText: {
     fontSize: 14,
@@ -205,12 +227,11 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: "#e0e0e0",
-    marginLeft: 96, // Match image width + margin
   },
   center: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 
