@@ -20,6 +20,7 @@ import {
   Image,
   Modal,
   Platform,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -67,6 +68,15 @@ const canceledBooking = async (formData: any) => {
   return response.data;
 };
 
+const fetchNotificationCustomerNotRead = async ({ queryKey }: any) => {
+  const [, customerId] = queryKey;
+  const res = await fetch(
+    `${apiUrl}/get_user_notification_not_read/${customerId}`
+  );
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+};
+
 export default function HomeScreen() {
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const [isEnabled, setIsEnabled] = useState(false);
@@ -103,6 +113,12 @@ export default function HomeScreen() {
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["getListBooking", customerId],
     queryFn: fetchAvailableTime,
+    enabled: !!customerId,
+  });
+
+  const { data: notificaton, refetch: refetchNotification } = useQuery({
+    queryKey: ["get_user_notification_not_read", customerId],
+    queryFn: fetchNotificationCustomerNotRead,
     enabled: !!customerId,
   });
 
@@ -211,17 +227,16 @@ export default function HomeScreen() {
     setCurrentBooking(null);
   };
 
-
   const confirmCanceledBooking = () => {
     mutation.mutate({
       bookingId: currentBooking,
     });
-    
   };
 
   const onRefresh = () => {
     refetch();
     refectCustomerDetail();
+    refetchNotification();
   };
 
   return (
@@ -392,21 +407,38 @@ export default function HomeScreen() {
               <FontAwesome name="filter" size={15} color="#fff" />
             </TouchableOpacity>
           </BlurView>
-          <View
+          <Pressable
             style={{
               borderColor: "#272835",
               borderWidth: 0.1,
-              borderRadius: "100%",
+              borderRadius: 100,
               padding: 15,
               backgroundColor: "#1A1B25",
               marginRight: 10,
               alignItems: "center",
+              justifyContent: "center",
             }}
+            onPress={() => router.push('/notification')}
           >
-            <Link href={"/notification"}>
-              <FontAwesome name="bell" size={15} color="white" />
-            </Link>
-          </View>
+            <View >
+              <View>
+                <FontAwesome name="bell" size={15} color="white" />
+                {notificaton?.count > 0 && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -4,
+                      backgroundColor: "red",
+                      borderRadius: 8,
+                      width: 10,
+                      height: 10,
+                    }}
+                  />
+                )}
+              </View>
+            </View>
+          </Pressable>
         </View>
 
         <View
@@ -583,7 +615,9 @@ export default function HomeScreen() {
                       <View style={styles.actionButtons}>
                         <TouchableOpacity
                           style={styles.cancelButton}
-                          onPress={() => handlePresentModalPress(booking.BOOKINGID)}
+                          onPress={() =>
+                            handlePresentModalPress(booking.BOOKINGID)
+                          }
                         >
                           <Text style={styles.cancelText}>Cancel Booking</Text>
                         </TouchableOpacity>
@@ -988,29 +1022,29 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalMessage: {
     fontSize: 14,
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
   modalButton: {
-     flex: 1,
+    flex: 1,
     padding: 12,
     marginHorizontal: 5,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   referralContainer: {
     borderRadius: 10,

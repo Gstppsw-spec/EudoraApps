@@ -1,13 +1,14 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  Alert,
+  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -15,21 +16,17 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import useStore from "../../store/useStore";
 
-const apiUrl = Constants.expoConfig?.extra?.apiUrl
-
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const verifyPinUsers = async (formData: any) => {
-  const response = await axios.post(
-    `${apiUrl}/verify_pin`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/verify_pin`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
@@ -39,6 +36,9 @@ export default function VerifyPin() {
   const router = useRouter();
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const [pin, setPin] = useState("");
+  const { t } = useTranslation();
+  const lang = useStore((state) => state.lang);
+  const [isFocused, setIsFocused] = useState(false);
 
   const mutation = useMutation({
     mutationFn: verifyPinUsers,
@@ -51,21 +51,39 @@ export default function VerifyPin() {
           router.replace("/tabs/home");
         }
       } else {
-        Alert.alert("PIN Salah", data.message);
+        Toast.show({
+          type: "error",
+          text1: data.message,
+          position: "top",
+        });
       }
     },
     onError: (error) => {
-      console.error("Error posting data:", error);
-      Alert.alert("Error", "Terjadi kesalahan saat verifikasi PIN");
+      Toast.show({
+        type: "error",
+        text1: "Terjadi Kesalahan",
+        text2: "Terjadi kesalahan saat verifikasi PIN",
+        position: "top",
+      });
     },
   });
 
   const handleVerifyPinUsers = () => {
     if (pin.length < 4 || pin.length > 6) {
-      Alert.alert("PIN tidak valid", "PIN harus 4-6 digit");
+      Toast.show({
+        type: "error",
+        text1: "PIN tidak valid",
+        text2: "PIN harus 4-6 digit",
+        position: "top",
+      });
       return;
     }
-    // Lolos semua validasi
+
+    console.log({
+      customerId: customerId,
+      pin: pin,
+    });
+    
     mutation.mutate({
       customerId: customerId,
       pin: pin,
@@ -73,32 +91,43 @@ export default function VerifyPin() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
-          <Text style={styles.instruction}>
-            Untuk keamanan, silakan masukkan PIN 6 digit Anda
-          </Text>
+          <Text style={styles.instruction}>{t("pinInstruction")}</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, isFocused && styles.inputFocused]}
             placeholder="******"
             keyboardType="number-pad"
             secureTextEntry
             maxLength={6}
             value={pin}
             onChangeText={setPin}
-            placeholderTextColor={'black'}
+            placeholderTextColor={"black"}
+            
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
           />
 
           <TouchableOpacity
-            style={styles.button}
+            disabled={mutation.isPending}
+            style={[styles.button, mutation.isPending && { opacity: 0.5 }]}
             onPress={handleVerifyPinUsers}
           >
-            <Text style={styles.buttonText}>Verifikasi PIN</Text>
+            {mutation.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color="#fff"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.buttonText}>Verify</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </TouchableWithoutFeedback>
@@ -127,20 +156,30 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#B0174C",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 18,
+    borderWidth: 2,
+    borderColor: "#ccc",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    fontSize: 24,
+    alignItems: "center",
+    letterSpacing: 15,
+    color: "#000",
     textAlign: "center",
-    letterSpacing: 5,
-    marginBottom: 20,
-    color: 'black'
+    backgroundColor: "#fff",
+  },
+  inputFocused: {
+    borderColor: "#B0174C",
+    shadowColor: "#B0174C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   button: {
     backgroundColor: "#B0174C",
     borderRadius: 10,
-    paddingVertical: 14,
+    paddingVertical: 16,
+    marginTop: 25,
     alignItems: "center",
   },
   buttonText: {

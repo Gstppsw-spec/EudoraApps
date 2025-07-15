@@ -1,6 +1,6 @@
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Image,
   Modal,
@@ -11,9 +11,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 // import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import Toast from "react-native-toast-message";
 import useStore from "../../../store/useStore";
 
@@ -27,9 +28,22 @@ const MyAccountScreen = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const profileImage = useStore((state) => state.profileImage);
 
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["35%", "50%"], []);
+
+  const handleShowLogout = useCallback(() => {
+    bottomSheetModalRef.current?.present();
+    console.log('muncul');
+    
+  }, []);
+
+  const handleCancel = () => {
+    bottomSheetModalRef.current?.dismiss();
+  };
+
   const handleLogOut = () => {
     router.replace("/authentication/otpWhatsapp");
-    setShowLogoutModal(false);
+    bottomSheetModalRef.current?.dismiss();
     setTimeout(() => {
       Toast.show({
         type: "success",
@@ -60,10 +74,7 @@ const MyAccountScreen = () => {
       <Link href="/tabs/account/details" style={styles.profileSection}>
         <View style={styles.profileSectionContent}>
           {profileImage ? (
-            <Image
-              source={{ uri: profileImage }}
-              style={styles.avatar}
-            />
+            <Image source={{ uri: profileImage }} style={styles.avatar} />
           ) : (
             <View style={styles.iconWrapper}>
               <FontAwesome5 name="user" size={35} color="#aaa" />
@@ -163,7 +174,7 @@ const MyAccountScreen = () => {
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => setShowLogoutModal(true)}
+              onPress={() => handleShowLogout()}
             >
               <Text style={styles.menuText}>Logout</Text>
             </TouchableOpacity>
@@ -197,42 +208,35 @@ const MyAccountScreen = () => {
         </Pressable>
       </Modal>
 
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={showLogoutModal}
-        onRequestClose={() => setShowLogoutModal(false)}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Logout Confirmation</Text>
-            </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.modalText}>
-                Are you sure you want to logout?
+        <BottomSheetView style={styles.modalContentSheet}>
+          <Text style={styles.modalTitleSheet}>Logout</Text>
+          <Text style={styles.modalMessage}>
+            Are you sure you want to logout?
+          </Text>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+              onPress={handleCancel}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButtonSheet, { backgroundColor: "#f87171" }]}
+              onPress={handleLogOut}
+            >
+              <Text style={[styles.modalButtonText, { color: "white" }]}>
+                Confirm
               </Text>
-            </View>
-
-            <View style={styles.modalFooter}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowLogoutModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleLogOut}
-              >
-                <Text style={styles.confirmButtonText}>Logout</Text>
-              </Pressable>
-            </View>
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        </BottomSheetView>
+      </BottomSheetModal>
     </SafeAreaView>
   );
 };
@@ -255,7 +259,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-
   },
   avatar: {
     width: 60,
@@ -265,7 +268,7 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
-    marginLeft: 10
+    marginLeft: 10,
   },
   name: {
     fontSize: 18,
@@ -420,6 +423,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 2,
     borderColor: "#ccc",
+  },
+  modalContentSheet: {
+    padding: 20,
+    alignItems: "center",
+  },
+  modalTitleSheet: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalButtonSheet: {
+    flex: 1,
+    padding: 12,
+    marginHorizontal: 5,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
 

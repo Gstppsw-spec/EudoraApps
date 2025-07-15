@@ -18,5 +18,6 @@
     "codeSentTo": "Kode dikirim ke ",
     "verificationCode": "Kode Verifikasi",
     "whatsappNumber": "Nomor WhatsApp",
-    "enter6DigitCode": "Masukkan 6 digit kode"
+    "enter6DigitCode": "Masukkan 6 digit kode",
+    "pinInstruction": "Untuk keamanan, silakan masukkan PIN 6 digit Anda"
 }

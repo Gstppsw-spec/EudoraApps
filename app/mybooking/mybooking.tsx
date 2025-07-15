@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-// import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import Constants from "expo-constants";
@@ -78,7 +78,6 @@ const MyBookingUpcoming = () => {
     bottomSheetModalRef.current?.dismiss();
   };
 
-
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["getListBooking", customerId],
     queryFn: fetchListBooking,
@@ -122,7 +121,6 @@ const MyBookingUpcoming = () => {
         visibilityTime: 2000,
       });
       queryClient.invalidateQueries(["getListBooking", customerId]);
-
     },
     onError: (error) => {
       setCurrentBooking(null);

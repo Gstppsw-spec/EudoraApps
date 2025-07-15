@@ -19,6 +19,8 @@
     "codeSentTo": "验证码已发送到 ",
     "verificationCode": "验证码",
     "whatsappNumber": "WhatsApp 号码",
-    "enter6DigitCode": "请输入 6 位数验证码"
+    "enter6DigitCode": "请输入 6 位数验证码",
+    "pinInstruction": "为了您的安全，请输入6位数的PIN码"
+
   }
 

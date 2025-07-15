@@ -6,10 +6,12 @@ import Toast from "react-native-toast-message";
 import useStore from "../../store/useStore";
 
 
+
 export default function NotificationListener() {
   const router = useRouter();
   const pathname = usePathname();
   const pendingRoute = useStore((state) => state.pendingRoute);
+  const customerId = useStore((state: { customerid: any }) => state.customerid);
 
   const pathnameRef = useRef(pathname);
   
@@ -41,7 +43,12 @@ export default function NotificationListener() {
         const data = response.notification.request.content.data;
         if (data?.route) {
           useStore.getState().setPendingRoute(data.route); // simpan dulu route tujuan
-          router.push("/authentication/verifyPin");
+          if(customerId){
+             router.push("/authentication/verifyPin");
+          }else{
+            router.push("/authentication/otpWhatsapp");
+          }
+         
         }
       }
     );
@@ -50,7 +57,11 @@ export default function NotificationListener() {
       const data = response?.notification?.request?.content?.data;
       if (data?.route) {
         useStore.getState().setPendingRoute(data.route);
-        router.push("/authentication/verifyPin");
+        if(customerId){
+             router.push("/authentication/verifyPin");
+          }else{
+            router.push("/authentication/otpWhatsapp");
+          }
       }
     });
 
