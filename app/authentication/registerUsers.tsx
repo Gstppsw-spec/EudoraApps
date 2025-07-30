@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
 import { Image } from "expo-image";
 import { useNavigation, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -22,14 +22,14 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
 } from "react-native";
+import CountryPicker, { Country } from "react-native-country-picker-modal";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Toast from "react-native-toast-message";
 import useStore from "../../store/useStore";
 import HeaderWithBack from "../component/headerWithBack";
 import useClinicDistances from "../hooks/useDistanceToClinic";
-import CountryPicker, { Country } from 'react-native-country-picker-modal';
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
@@ -49,11 +49,15 @@ const sendOtp = async (formData: any) => {
 };
 
 const verifyOtp = async (formData: any) => {
-  const response = await axios.post(`${apiUrl}/verify_otpRegistration`, formData, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const response = await axios.post(
+    `${apiUrl}/verify_otpRegistration`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
   return response.data;
 };
 
@@ -74,13 +78,13 @@ export default function Register() {
 
   // Country code state
   const [country, setCountry] = useState<Country>({
-    callingCode: ['62'], // Default to Indonesia
-    cca2: 'ID',
-    currency: ['IDR'],
-    flag: 'flag-id',
-    name: 'Indonesia',
-    region: 'Asia',
-    subregion: 'South-Eastern Asia'
+    callingCode: ["62"], // Default to Indonesia
+    cca2: "ID",
+    currency: ["IDR"],
+    flag: "flag-id",
+    name: "Indonesia",
+    region: "Asia",
+    subregion: "South-Eastern Asia",
   });
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
@@ -124,16 +128,16 @@ export default function Register() {
 
   const handlePhoneChange = (text: string) => {
     // Remove all non-digit characters
-    let cleanedText = text.replace(/[^0-9]/g, '');
-    
+    let cleanedText = text.replace(/[^0-9]/g, "");
+
     // Remove leading zeros
-    if (cleanedText.startsWith('0')) {
+    if (cleanedText.startsWith("0")) {
       cleanedText = cleanedText.substring(1);
     }
-    
+
     // Limit to 15 characters max
     cleanedText = cleanedText.substring(0, 15);
-    
+
     handleChange("phone", cleanedText);
   };
 
@@ -186,12 +190,13 @@ export default function Register() {
       if (data.status) {
         setCustomerId(data.customerId);
         setCustomerDetails({
-          fullname: data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname,
+          fullname:
+            data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname,
           email: data?.dataCustomer?.email,
           phone: data?.dataCustomer?.cellphonenumber,
           gender: data?.dataCustomer?.sex,
           dateofbirth: data?.dataCustomer?.dateofbirth,
-          locationCustomerRegister: data?.dataCustomer?.locationid
+          locationCustomerRegister: data?.dataCustomer?.locationid,
         });
         router.replace("/authentication/setPin");
       } else {
@@ -217,13 +222,16 @@ export default function Register() {
       formData.phone
     ) {
       if (!isValidPhoneNumber(formData.phone)) {
-        Alert.alert("Error", "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan.");
+        Alert.alert(
+          "Error",
+          "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan."
+        );
         return;
       }
-      
+
       mutation.mutate({
         ...formData,
-        countryCode: country.callingCode[0]
+        countryCode: country.callingCode[0],
       });
     } else {
       Toast.show({
@@ -247,7 +255,7 @@ export default function Register() {
       const payload = {
         ...formData,
         otp: otp,
-        countryCode: country.callingCode[0]
+        countryCode: country.callingCode[0],
       };
       mutationVerifyOtp.mutate(payload);
     } else {
@@ -510,22 +518,23 @@ export default function Register() {
                       </View>
                     </View>
                   </Modal>
-
-                  <CountryPicker
-                    visible={showCountryPicker}
-                    withCallingCode
-                    withFilter
-                    withFlag
-                    withAlphaFilter
-                    withCallingCodeButton
-                    withEmoji
-                    onSelect={(selectedCountry) => {
-                      setCountry(selectedCountry);
-                      setShowCountryPicker(false);
-                    }}
-                    onClose={() => setShowCountryPicker(false)}
-                    countryCode={country.cca2}
-                  />
+                  {showCountryPicker && (
+                    <CountryPicker
+                      visible={showCountryPicker}
+                      withCallingCode
+                      withFilter
+                      withFlag
+                      withAlphaFilter
+                      withCallingCodeButton
+                      withEmoji
+                      onSelect={(selectedCountry) => {
+                        setCountry(selectedCountry);
+                        setShowCountryPicker(false);
+                      }}
+                      onClose={() => setShowCountryPicker(false)}
+                      countryCode={country.cca2}
+                    />
+                  )}
                 </View>
               </TouchableWithoutFeedback>
             </>
@@ -564,7 +573,8 @@ export default function Register() {
                       maxLength={6}
                     />
                     <Text style={styles.otpNote}>
-                      {t("codeSentTo")} +{country.callingCode[0]} {formData.phone}
+                      {t("codeSentTo")} +{country.callingCode[0]}{" "}
+                      {formData.phone}
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -606,7 +616,12 @@ export default function Register() {
 
 const styles = StyleSheet.create({
   scrollContainer: { flexGrow: 1 },
-  container: { flex: 1, paddingHorizontal: 20, paddingTop: 40, marginBottom: 20 },
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    marginBottom: 20,
+  },
   inputGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: "600", color: "#475569", marginBottom: 8 },
   input: {
@@ -617,21 +632,21 @@ const styles = StyleSheet.create({
     color: "#1e293b",
   },
   phoneInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
   },
   countryCodeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingRight: 10,
     marginRight: 10,
     borderRightWidth: 1,
-    borderRightColor: '#e2e8f0',
+    borderRightColor: "#e2e8f0",
   },
   countryCodeText: {
-    color: '#1e293b',
+    color: "#1e293b",
     fontSize: 14,
     marginRight: 5,
   },
@@ -640,9 +655,9 @@ const styles = StyleSheet.create({
   },
   phoneHint: {
     fontSize: 12,
-    color: '#6b7280',
+    color: "#6b7280",
     marginTop: 8,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   placeholderText: { color: "#9ca3af" },
   text: { color: "#1e293b", fontSize: 14 },

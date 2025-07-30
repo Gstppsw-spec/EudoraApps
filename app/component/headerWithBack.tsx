@@ -14,7 +14,7 @@ const HeaderWithBack = ({ title, backHref, useGoBack = false }: any) => {
 
   const handleBack = () => {
     if (useGoBack) {
-      router.back();
+      router.back();            
     } else {
       router.replace(backHref);
     }

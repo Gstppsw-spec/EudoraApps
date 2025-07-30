@@ -1,6 +1,6 @@
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Image,
   Modal,
@@ -11,11 +11,13 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 // import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import Toast from "react-native-toast-message";
 import useStore from "../../../store/useStore";
+import { useTranslation } from "react-i18next"; // Include this for translation
 
 const MyAccountScreen = () => {
   const router = useRouter();
@@ -27,14 +29,28 @@ const MyAccountScreen = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const profileImage = useStore((state) => state.profileImage);
 
+  // Use the translation hook
+  const { t } = useTranslation();
+
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["35%", "50%"], []);
+
+  const handleShowLogout = useCallback(() => {
+    bottomSheetModalRef.current?.present();
+  }, []);
+
+  const handleCancel = () => {
+    bottomSheetModalRef.current?.dismiss();
+  };
+
   const handleLogOut = () => {
     router.replace("/authentication/otpWhatsapp");
-    setShowLogoutModal(false);
+    bottomSheetModalRef.current?.dismiss();
     setTimeout(() => {
       Toast.show({
         type: "success",
-        text1: "Sukses",
-        text2: "Logout berhasil!",
+        text1: t("successTitle"),
+        text2: t("logoutSuccess"), // This should be defined in your translation files
         position: "top",
         visibilityTime: 2000,
       });
@@ -50,7 +66,7 @@ const MyAccountScreen = () => {
   ];
 
   const handleSelectLanguage = (lang) => {
-    setLang(lang.value);
+    setLang(lang.value);  
     setLanguageModalVisible(false);
   };
 
@@ -60,10 +76,7 @@ const MyAccountScreen = () => {
       <Link href="/tabs/account/details" style={styles.profileSection}>
         <View style={styles.profileSectionContent}>
           {profileImage ? (
-            <Image
-              source={{ uri: profileImage }}
-              style={styles.avatar}
-            />
+            <Image source={{ uri: profileImage }} style={styles.avatar} />
           ) : (
             <View style={styles.iconWrapper}>
               <FontAwesome5 name="user" size={35} color="#aaa" />
@@ -81,19 +94,19 @@ const MyAccountScreen = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Personal Info Section */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>General</Text>
+          <Text style={styles.sectionTitle}>{t("general")}</Text> {/* Translation for "General" */}
           <View style={styles.sectionItem}>
             {/* Your Treatment Section */}
             <Link href="/treatment/yourTeatment" asChild>
               <TouchableOpacity style={styles.menuItem}>
-                <Text style={styles.menuText}>My Treatment & Package</Text>
+                <Text style={styles.menuText}>{t("treatmentAndPackage")}</Text> {/* Translated text for "My Treatment & Package" */}
                 <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
 
             <Link href="/mybooking/myBooking" asChild>
               <TouchableOpacity style={styles.menuItem}>
-                <Text style={styles.menuText}>My History</Text>
+                <Text style={styles.menuText}>{t("myHistory")}</Text> {/* Translated text for "My History" */}
                 <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
@@ -101,7 +114,7 @@ const MyAccountScreen = () => {
 
           <Link href="/notification" asChild>
             <TouchableOpacity style={styles.menuItem}>
-              <Text style={styles.menuText}>Push Notification</Text>
+              <Text style={styles.menuText}>{t("pushNotification")}</Text> {/* Translated text for "Push Notification" */}
               <MaterialIcons name="chevron-right" size={24} color="#999" />
             </TouchableOpacity>
           </Link>
@@ -111,7 +124,7 @@ const MyAccountScreen = () => {
             onPress={() => setLanguageModalVisible(true)}
           >
             <View style={styles.menuTextContainer}>
-              <Text style={styles.menuText}>Language</Text>
+              <Text style={styles.menuText}>{t("language")}</Text> {/* Translation for "Language" */}
               <Text style={styles.cacheSize}>
                 {languages.find((langObj) => langObj.value === lang)?.label}
               </Text>
@@ -121,7 +134,7 @@ const MyAccountScreen = () => {
 
           <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
             <View style={styles.menuTextContainer}>
-              <Text style={styles.menuText}>Clear Cache</Text>
+              <Text style={styles.menuText}>{t("clearCache")}</Text> {/* Translation for "Clear Cache" */}
               <Text style={styles.cacheSize}>88 MB</Text>
             </View>
             <MaterialIcons name="chevron-right" size={24} color="#999" />
@@ -130,42 +143,39 @@ const MyAccountScreen = () => {
 
         {/* About Section */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle}>{t("about")}</Text> {/* Translation for "About" */}
 
           <View style={styles.sectionItem}>
-            {/* <Link href="/help-center" asChild> */}
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <Text style={styles.menuText}>Help Center</Text>
+              <Text style={styles.menuText}>{t("helpCenter")}</Text> {/* Translated text for "Help Center" */}
               <MaterialIcons name="chevron-right" size={24} color="#999" />
             </TouchableOpacity>
-            {/* </Link> */}
 
             <Link href="/static/privacy-policy" asChild>
               <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                <Text style={styles.menuText}>Privacy & Policy</Text>
+                <Text style={styles.menuText}>{t("privacyPolicy")}</Text> {/* Translated text for "Privacy & Policy" */}
                 <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
 
             <Link href="/static/about" asChild>
               <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                <Text style={styles.menuText}>About</Text>
+                <Text style={styles.menuText}>{t("about")}</Text> {/* Translated text for "About" */}
                 <MaterialIcons name="chevron-right" size={24} color="#999" />
               </TouchableOpacity>
             </Link>
 
-            {/* <Link href="/terms-and-conditions" asChild> */}
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <Text style={styles.menuText}>Terms & Conditions</Text>
+              <Text style={styles.menuText}>{t("termsConditions")}</Text> {/* Translated text for "Terms & Conditions" */}
               <MaterialIcons name="chevron-right" size={24} color="#999" />
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => setShowLogoutModal(true)}
+              onPress={() => handleShowLogout()}
             >
-              <Text style={styles.menuText}>Logout</Text>
+              <Text style={styles.menuText}>{t("logout")}</Text> {/* Translated text for "Logout" */}
             </TouchableOpacity>
           </View>
         </View>
@@ -197,42 +207,35 @@ const MyAccountScreen = () => {
         </Pressable>
       </Modal>
 
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={showLogoutModal}
-        onRequestClose={() => setShowLogoutModal(false)}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Logout Confirmation</Text>
-            </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.modalText}>
-                Are you sure you want to logout?
+        <BottomSheetView style={styles.modalContentSheet}>
+          <Text style={styles.modalTitleSheet}>{t("logout")}</Text> {/* Translated text for "Logout" */}
+          <Text style={styles.modalMessage}>
+            {t("confirmLogout")} {/* Translated text for confirmation message */}
+          </Text>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+              onPress={handleCancel}
+            >
+              <Text style={styles.modalButtonText}>{t("cancel")}</Text> {/* Translated text for "Cancel" */}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButtonSheet, { backgroundColor: "#f87171" }]}
+              onPress={handleLogOut}
+            >
+              <Text style={[styles.modalButtonText, { color: "white" }]}>
+                {t("confirm")} {/* Translated text for "Confirm" */}
               </Text>
-            </View>
-
-            <View style={styles.modalFooter}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowLogoutModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleLogOut}
-              >
-                <Text style={styles.confirmButtonText}>Logout</Text>
-              </Pressable>
-            </View>
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        </BottomSheetView>
+      </BottomSheetModal>
     </SafeAreaView>
   );
 };
@@ -255,7 +258,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-
   },
   avatar: {
     width: 60,
@@ -265,7 +267,7 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
-    marginLeft: 10
+    marginLeft: 10,
   },
   name: {
     fontSize: 18,
@@ -303,15 +305,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
   },
-  subSectionTitle: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#888",
-    marginTop: 12,
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -347,79 +340,39 @@ const styles = StyleSheet.create({
   },
   languageOption: {
     padding: 12,
-    // borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
   languageOptionSelected: {
     backgroundColor: "#f0f0f0",
     borderRadius: 10,
   },
-  menuTextContainer: {
-    flexDirection: "row",
+  modalContentSheet: {
+    padding: 20,
     alignItems: "center",
   },
-  modalContainer: {
-    width: "80%",
-    backgroundColor: "white",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  modalHeader: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  modalTitle: {
+  modalTitleSheet: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "bold",
+    marginBottom: 12,
     textAlign: "center",
-    color: "#333",
   },
-  modalBody: {
-    padding: 20,
-  },
-  modalText: {
-    fontSize: 16,
+  modalMessage: {
+    fontSize: 14,
+    marginBottom: 20,
     textAlign: "center",
-    color: "#666",
-    lineHeight: 24,
   },
-  modalFooter: {
+  modalButtons: {
     flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    justifyContent: "space-between",
   },
   modalButton: {
     flex: 1,
     padding: 16,
     alignItems: "center",
   },
-  cancelButton: {
-    borderRightWidth: 1,
-    borderRightColor: "#f0f0f0",
-  },
-  cancelButtonText: {
-    color: "#666",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  confirmButton: {
-    backgroundColor: "#f8f8f8",
-  },
-  confirmButtonText: {
-    color: "#ff4444",
-    fontSize: 16,
+  modalButtonText: {
+    fontSize: 14,
     fontWeight: "600",
-  },
-  iconWrapper: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#eee",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#ccc",
   },
 });
 

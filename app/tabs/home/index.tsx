@@ -20,6 +20,7 @@ import {
   Image,
   Modal,
   Platform,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -40,25 +41,26 @@ import Animated, {
 import Carousel from "react-native-reanimated-carousel";
 import Toast from "react-native-toast-message";
 import useStore from "../../../store/useStore";
+import { useTranslation } from "react-i18next"; // Translation hook
 
 const { width } = Dimensions.get("window");
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
-const fetchAvailableTime = async ({ queryKey }: any) => {
+const fetchAvailableTime = async ({ queryKey }) => {
   const [, customerId] = queryKey;
   const res = await fetch(`${apiUrl}/getListBooking/${customerId}/1`);
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
-const fetchDetailCustomer = async ({ queryKey }: any) => {
+const fetchDetailCustomer = async ({ queryKey }) => {
   const [, customerId] = queryKey;
   const res = await fetch(`${apiUrl}/getDetailCustomer/${customerId}`);
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
-const canceledBooking = async (formData: any) => {
+const canceledBooking = async (formData) => {
   const response = await axios.post(`${apiUrl}/canceledBooking`, formData, {
     headers: {
       "Content-Type": "application/json",
@@ -67,13 +69,32 @@ const canceledBooking = async (formData: any) => {
   return response.data;
 };
 
+const fetchNotificationCustomerNotRead = async ({ queryKey }) => {
+  const [, customerId] = queryKey;
+  const res = await fetch(
+    `${apiUrl}/get_user_notification_not_read/${customerId}`
+  );
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+};
+
 export default function HomeScreen() {
-  const customerId = useStore((state: { customerid: any }) => state.customerid);
+  const { t } = useTranslation(); // Initialize translation hook
+  const customerId = useStore((state) => state.customerid);
   const [isEnabled, setIsEnabled] = useState(false);
   const [switchStates, setSwitchStates] = useState<boolean[]>([]);
+  const [likedItemsCount, setLikedItemsCount] = useState(0);
   const queryClient = useQueryClient();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ["35%", "50%"], []);
+  const imageData = [
+    `${apiUrl}/uploads/iklan/carousel4.jpg`,
+    `${apiUrl}/uploads/iklan/carousel.jpg`,
+  ];
+  const imageDataEvent = [
+    `${apiUrl}/uploads/iklan/promo779k.png`,
+    `${apiUrl}/uploads/iklan/1rupiah.png`,
+  ];
 
   const handlePresentModalPress = useCallback((bookingId) => {
     setCurrentBooking(bookingId);
@@ -85,16 +106,6 @@ export default function HomeScreen() {
     bottomSheetModalRef.current?.dismiss();
   };
 
-  const imageData = [
-    `${apiUrl}/uploads/iklan/carousel4.jpg`,
-    `${apiUrl}/uploads/iklan/carousel.jpg`,
-  ];
-
-  const imageDataEvent = [
-    `${apiUrl}/uploads/iklan/promo779k.png`,
-    `${apiUrl}/uploads/iklan/1rupiah.png`,
-  ];
-
   const progressValue = useSharedValue(0);
   const { addReminder, removeReminder } = useStore();
   const [modalVisible, setModalVisible] = useState(false);
@@ -103,6 +114,12 @@ export default function HomeScreen() {
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["getListBooking", customerId],
     queryFn: fetchAvailableTime,
+    enabled: !!customerId,
+  });
+
+  const { data: notificaton, refetch: refetchNotification } = useQuery({
+    queryKey: ["get_user_notification_not_read", customerId],
+    queryFn: fetchNotificationCustomerNotRead,
     enabled: !!customerId,
   });
 
@@ -123,7 +140,8 @@ export default function HomeScreen() {
       bottomSheetModalRef.current?.dismiss();
       Toast.show({
         type: "success",
-        text2: "Appointment berhsil dicancel!",
+        text1: t("successTitle"),
+        text2: t("bookingCancelSuccess"),
         position: "top",
         visibilityTime: 2000,
       });
@@ -134,7 +152,8 @@ export default function HomeScreen() {
       bottomSheetModalRef.current?.dismiss();
       Toast.show({
         type: "error",
-        text2: "Appointment gagal dicancel!",
+        text1: t("errorTitle"),
+        text2: t("bookingCancelFailed"),
         position: "top",
         visibilityTime: 2000,
       });
@@ -161,7 +180,6 @@ export default function HomeScreen() {
     setSwitchStates((prevState) => {
       const updated = [...prevState];
       updated[index] = willBeEnabled;
-
       return updated;
     });
     if (willBeEnabled) {
@@ -181,8 +199,11 @@ export default function HomeScreen() {
       if (dateOnly > now) {
         Notifications.scheduleNotificationAsync({
           content: {
-            title: "Hari ini kamu ada booking!",
-            body: `${booking.SERVICE} di ${booking.LOCATIONNAME}`,
+            title: t("notification.bookingTodayTitle"),
+            body: t("notification.bookingTodayBody", {
+              service: booking.SERVICE,
+              location: booking.LOCATIONNAME
+            }),
             sound: true,
           },
           trigger: { type: "date", date: dateOnly },
@@ -192,8 +213,12 @@ export default function HomeScreen() {
       if (twoHoursBefore > now) {
         Notifications.scheduleNotificationAsync({
           content: {
-            title: "Booking 2 jam lagi!",
-            body: `${booking.SERVICE} jam ${booking.TIME} di ${booking.LOCATIONNAME}`,
+            title: t("notification.bookingReminderTitle"),
+            body: t("notification.bookingReminderBody", {
+              service: booking.SERVICE,
+              time: booking.TIME,
+              location: booking.LOCATIONNAME
+            }),
             sound: true,
           },
           trigger: { type: "date", date: twoHoursBefore },
@@ -211,17 +236,20 @@ export default function HomeScreen() {
     setCurrentBooking(null);
   };
 
-
   const confirmCanceledBooking = () => {
     mutation.mutate({
       bookingId: currentBooking,
     });
-    
   };
 
   const onRefresh = () => {
     refetch();
     refectCustomerDetail();
+    refetchNotification();
+  };
+
+  const toggleFavorite = () => {
+    setLikedItemsCount((prevCount) => (prevCount + 1));
   };
 
   return (
@@ -233,6 +261,107 @@ export default function HomeScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
         }
       >
+        {/* Header with Search and Icons */}
+        <View
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            width: "100%",
+            position: "absolute",
+            top: 10,
+            alignItems: "center",
+            paddingHorizontal: 20,
+            zIndex: 100,
+          }}
+        >
+          <BlurView intensity={30} tint="dark" style={styles.searchContainer}>
+            <FontAwesome
+              name="search"
+              size={15}
+              color="#fff"
+              style={styles.icon}
+            />
+            <TextInput
+              placeholder={t("search")}
+              placeholderTextColor="white"
+              style={styles.input}
+            />
+            <TouchableOpacity>
+              <FontAwesome name="filter" size={15} color="#fff" />
+            </TouchableOpacity>
+          </BlurView>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Pressable
+              style={{
+                borderColor: "#272835",
+                borderWidth: 0.1,
+                borderRadius: 100,
+                padding: 15,
+                backgroundColor: "#1A1B25",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={() => {
+                toggleFavorite();
+                router.push('/category/Favorites');
+              }}
+            >
+              <FontAwesome name="heart" size={15} color="white" />
+              {likedItemsCount > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    backgroundColor: "red",
+                    borderRadius: 8,
+                    width: 20,
+                    height: 20,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "bold", fontSize: 12 }}>
+                    {likedItemsCount}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={{
+                borderColor: "#272835",
+                borderWidth: 0.1,
+                borderRadius: 100,
+                padding: 15,
+                backgroundColor: "#1A1B25",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={() => router.push('/notification')}
+            >
+              <View>
+                <FontAwesome name="bell" size={15} color="white" />
+                {notificaton?.count > 0 && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -4,
+                      backgroundColor: "red",
+                      borderRadius: 8,
+                      width: 10,
+                      height: 10,
+                    }}
+                  />
+                )}
+              </View>
+            </Pressable>
+          </View>
+        </View>
+
         <View style={styles.container}>
           <Carousel
             width={width}
@@ -269,8 +398,8 @@ export default function HomeScreen() {
           </View>
 
           <LinearGradient
-            colors={["#FFFFFF", "#FFFFFF", "#B0174C"]} // putih dominan, oranye sedikit
-            locations={[0, 0.85, 1]} // oranye hanya di 5% bagian bawah
+            colors={["#FFFFFF", "#FFFFFF", "#B0174C"]}
+            locations={[0, 0.85, 1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={styles.pointsCard}
@@ -278,7 +407,7 @@ export default function HomeScreen() {
             <Link href="/Point/point" style={styles.pointItem}>
               <View style={styles.pointContent}>
                 <FontAwesome
-                  name="gift" // bisa diganti "gift", "diamond", "trophy", dll
+                  name="gift"
                   size={18}
                   color="#B0174C"
                   style={{ marginLeft: 6 }}
@@ -289,7 +418,7 @@ export default function HomeScreen() {
                         customerDetail.detailcustomer[0].TOTALPOINT
                       ).toLocaleString("id-ID")
                     : "0"}{" "}
-                  POINTS
+                  {t("points")}
                 </Text>
               </View>
             </Link>
@@ -303,7 +432,7 @@ export default function HomeScreen() {
               }}
             >
               <Text style={styles.referralLabel}>
-                Dapatkan point dengan undang teman kamu
+                {t("getPointsByReferring")}
               </Text>
               <View
                 style={{
@@ -320,21 +449,13 @@ export default function HomeScreen() {
                       customerDetail?.detailcustomer[0]?.REFERRALCODE ||
                       "UNKNOWN";
                     Clipboard.setStringAsync(code);
-                    if (Platform.OS === "android") {
-                      Toast.show({
-                        type: "success",
-                        text2: "Refferal code berhasil dicopy!",
-                        position: "top",
-                        visibilityTime: 2000,
-                      });
-                    } else {
-                      Toast.show({
-                        type: "success",
-                        text2: "Refferal code berhasil dicopy!",
-                        position: "top",
-                        visibilityTime: 2000,
-                      });
-                    }
+                    Toast.show({
+                      type: "success",
+                      text1: t("successTitle"),
+                      text2: t("referralCodeCopied"),
+                      position: "top",
+                      visibilityTime: 2000,
+                    });
                   }}
                 >
                   <Feather name="copy" size={20} color="#B0174C" />
@@ -345,13 +466,14 @@ export default function HomeScreen() {
                       const code =
                         customerDetail?.detailcustomer[0]?.REFERRALCODE ||
                         "UNKNOWN";
-                      const message = `Gunakan kode referral saya: ${code} untuk daftar di Eudora Clinic! ✨`;
+                      const message = t("referralShareMessage", { code });
 
                       await Share.share({ message });
                     } catch (error) {
                       Toast.show({
                         type: "error",
-                        text2: "Gagal share refferal code!",
+                        text1: t("errorTitle"),
+                        text2: t("referralShareFailed"),
                         position: "top",
                         visibilityTime: 2000,
                       });
@@ -363,50 +485,6 @@ export default function HomeScreen() {
               </View>
             </View>
           </LinearGradient>
-        </View>
-
-        <View
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "space-between",
-            width: "100%",
-            position: "absolute",
-            top: 10,
-            alignItems: "center",
-          }}
-        >
-          <BlurView intensity={30} tint="dark" style={styles.searchContainer}>
-            <FontAwesome
-              name="search"
-              size={15}
-              color="#fff"
-              style={styles.icon}
-            />
-            <TextInput
-              placeholder="Search"
-              placeholderTextColor="white"
-              style={styles.input}
-            />
-            <TouchableOpacity>
-              <FontAwesome name="filter" size={15} color="#fff" />
-            </TouchableOpacity>
-          </BlurView>
-          <View
-            style={{
-              borderColor: "#272835",
-              borderWidth: 0.1,
-              borderRadius: "100%",
-              padding: 15,
-              backgroundColor: "#1A1B25",
-              marginRight: 10,
-              alignItems: "center",
-            }}
-          >
-            <Link href={"/notification"}>
-              <FontAwesome name="bell" size={15} color="white" />
-            </Link>
-          </View>
         </View>
 
         <View
@@ -429,38 +507,47 @@ export default function HomeScreen() {
                 marginBottom: 2,
               }}
             >
-              {" "}
-              Hi {customerDetail?.detailcustomer?.[0]?.FIRSTNAME}{" "}
-              {customerDetail?.detailcustomer?.[0]?.LASTNAME}, siap menjadi
-              cantik?
+              {t("greeting", { 
+                firstName: customerDetail?.detailcustomer?.[0]?.FIRSTNAME,
+                lastName: customerDetail?.detailcustomer?.[0]?.LASTNAME 
+              })}
             </Text>
           </View>
         </View>
 
         <View style={styles.containerCategory}>
           <View style={styles.iconCategory}>
-            <TouchableOpacity style={styles.buttonIconCategory}>
+            <TouchableOpacity 
+              style={styles.buttonIconCategory}
+              onPress={() => router.push("/category/face")}
+            >
               <MaterialCommunityIcons
                 name="face-woman-shimmer"
                 size={24}
                 color="#B0174C"
               />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Face</Text>
+            <Text style={{ fontSize: 11, fontWeight: "bold" }}>{t("face")}</Text>
           </View>
 
           <View style={styles.iconCategory}>
-            <TouchableOpacity style={styles.buttonIconCategory}>
+            <TouchableOpacity 
+              style={styles.buttonIconCategory}
+              onPress={() => router.push("/category/body")}
+            >
               <FontAwesome name="female" size={20} color="#B0174C" />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Body</Text>
+            <Text style={{ fontSize: 11, fontWeight: "bold" }}>{t("body")}</Text>
           </View>
 
           <View style={styles.iconCategory}>
-            <TouchableOpacity style={styles.buttonIconCategory}>
+            <TouchableOpacity 
+              style={styles.buttonIconCategory}
+              onPress={() => router.push("/category/product")}
+            >
               <FontAwesome name="shopping-bag" size={20} color="#B0174C" />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Product</Text>
+            <Text style={{ fontSize: 11, fontWeight: "bold" }}>{t("product")}</Text>
           </View>
 
           <View style={styles.iconCategory}>
@@ -470,7 +557,7 @@ export default function HomeScreen() {
             >
               <FontAwesome name="ellipsis-h" size={20} color="#B0174C" />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "bold" }}>More</Text>
+            <Text style={{ fontSize: 11, fontWeight: "bold" }}>{t("more")}</Text>
           </View>
         </View>
 
@@ -485,14 +572,14 @@ export default function HomeScreen() {
             }}
           >
             <Text style={{ fontWeight: "bold", fontSize: 16 }}>
-              Upcoming Appointments
+              {t("upcomingAppointments")}
             </Text>
             <Link href={"/mybooking/myBooking"} asChild>
               <TouchableOpacity>
                 <Text
                   style={{ fontSize: 14, fontWeight: "bold", color: "#B0174C" }}
                 >
-                  See All
+                  {t("seeAll")}
                 </Text>
               </TouchableOpacity>
             </Link>
@@ -512,7 +599,7 @@ export default function HomeScreen() {
               <ActivityIndicator size="large" />
             </View>
           ) : error ? (
-            <Text>Error..</Text>
+            <Text>{t("errorLoading")}</Text>
           ) : data?.customerbooking?.length > 0 ? (
             data.customerbooking
               .slice(0, 3)
@@ -548,7 +635,7 @@ export default function HomeScreen() {
                           {formattedDate} ({booking.TIME})
                         </Text>
                         <View style={styles.remindButton}>
-                          <Text style={styles.remindText}>Remind me</Text>
+                          <Text style={styles.remindText}>{t("remindMe")}</Text>
                           <Switch
                             style={styles.switch}
                             trackColor={{ false: "#ccc", true: "#FFB900" }}
@@ -574,7 +661,9 @@ export default function HomeScreen() {
                           <Text style={styles.clinicAddress}>
                             {booking.ADDRESS}
                           </Text>
-                          <Text style={styles.servicesTitle}>Services:</Text>
+                          <Text style={styles.servicesTitle}>
+                            {t("services")}:
+                          </Text>
                           <Text style={styles.servicesText}>
                             {booking.SERVICE}
                           </Text>
@@ -583,9 +672,13 @@ export default function HomeScreen() {
                       <View style={styles.actionButtons}>
                         <TouchableOpacity
                           style={styles.cancelButton}
-                          onPress={() => handlePresentModalPress(booking.BOOKINGID)}
+                          onPress={() =>
+                            handlePresentModalPress(booking.BOOKINGID)
+                          }
                         >
-                          <Text style={styles.cancelText}>Cancel Booking</Text>
+                          <Text style={styles.cancelText}>
+                            {t("cancelBooking")}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -595,9 +688,9 @@ export default function HomeScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="medkit-outline" size={40} color="#E0E0E0" />
-              <Text style={styles.emptyTitle}>No History found</Text>
+              <Text style={styles.emptyTitle}>{t("noHistoryFound")}</Text>
               <Text style={styles.emptySubtitle}>
-                You don't have any upcoming appointment yet
+                {t("noUpcomingAppointments")}
               </Text>
             </View>
           )}
@@ -615,14 +708,8 @@ export default function HomeScreen() {
               }}
             >
               <Text style={{ fontWeight: "bold", fontSize: 14 }}>
-                Our Beauty Event,
+                {t("ourBeautyEvent")}
               </Text>
-
-              <TouchableOpacity>
-                <Text
-                  style={{ fontSize: 14, fontWeight: "bold", color: "#FFB900" }}
-                ></Text>
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -670,26 +757,26 @@ export default function HomeScreen() {
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={cancelModal} // Close on back button
+        onRequestClose={cancelModal}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cancel Booking</Text>
+            <Text style={styles.modalTitle}>{t("cancelBooking")}</Text>
             <Text style={styles.modalMessage}>
-              Are you sure you want to cancel this booking?
+              {t("confirmCancelBooking")}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalButton}
                 onPress={cancelModal}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
+                <Text style={styles.modalButtonText}>{t("cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => confirmCanceledBooking()}
                 style={styles.modalButton}
               >
-                <Text style={styles.modalButtonText}>Confirm</Text>
+                <Text style={styles.modalButtonText}>{t("confirm")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -704,23 +791,23 @@ export default function HomeScreen() {
           backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
         >
           <BottomSheetView style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cancel Booking</Text>
+            <Text style={styles.modalTitle}>{t("cancelBooking")}</Text>
             <Text style={styles.modalMessage}>
-              Are you sure you want to cancel this booking?
+              {t("confirmCancelBooking")}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: "#ccc" }]}
                 onPress={handleCancel}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
+                <Text style={styles.modalButtonText}>{t("cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: "#f87171" }]}
                 onPress={confirmCanceledBooking}
               >
                 <Text style={[styles.modalButtonText, { color: "white" }]}>
-                  Confirm
+                  {t("confirm")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -731,7 +818,7 @@ export default function HomeScreen() {
   );
 }
 
-const IndicatorDot = ({ index, progressValue }: any) => {
+const IndicatorDot = ({ index, progressValue }) => {
   const animatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       progressValue.value,
@@ -776,42 +863,23 @@ const styles = StyleSheet.create({
   indicatorContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    // marginTop: 10,
-    // position: 'absolute',
-    // top: 200
   },
   containerArea: {
     flex: 1,
     backgroundColor: "#ffffff",
   },
-  floatingBox: {
-    backgroundColor: "#1A1B25",
-    padding: 15,
-    position: "absolute",
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: "#F9A000",
-    width: "90%",
-    top: 145,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
   searchContainer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     borderColor: "rgba(255,255,255,0.15)",
-    width: "80%",
     paddingHorizontal: 13,
     paddingVertical: Platform.OS === "ios" ? 12 : 0,
     borderRadius: 12,
     borderWidth: 1,
     gap: 5,
-    marginLeft: 10,
-    alignSelf: "center",
     overflow: "hidden",
+    marginRight: 10,
   },
   input: {
     flex: 1,
@@ -837,7 +905,7 @@ const styles = StyleSheet.create({
   buttonIconCategory: {
     width: 60,
     height: 60,
-    borderRadius: 30, // setengah dari width/height
+    borderRadius: 30,
     borderWidth: 1,
     borderColor: "#FFE5F8",
     backgroundColor: "#FFE5F8",
@@ -845,7 +913,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 5,
   },
-
   bookingContainer: {
     paddingVertical: 15,
   },
@@ -864,8 +931,6 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    // fontWeight: "bold",
-    // marginBottom: 10,
   },
   remindButton: {
     flexDirection: "row",
@@ -875,7 +940,6 @@ const styles = StyleSheet.create({
   remindText: {
     color: "#A4ACB9",
     fontSize: 14,
-    // fontWeight: "bold",
   },
   clinicName: {
     fontSize: 18,
@@ -914,17 +978,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
   },
-  receiptButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: "#FFB900",
-    borderRadius: 5,
-  },
-  receiptText: {
-    color: "#FFB900",
-    fontWeight: "bold",
-  },
   divider: {
     height: 1,
     backgroundColor: "#eee",
@@ -959,28 +1012,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-  pointLabel: {
-    color: "green",
-    fontSize: 10,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-  },
   pointValue: {
     color: "black",
     fontSize: 12,
     fontWeight: "bold",
   },
-  dividerVertical: {
-    width: 1,
-    height: "60%",
-    backgroundColor: "#FFB900",
-    opacity: 0.5,
-  },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
     padding: 20,
@@ -988,48 +1029,40 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalMessage: {
     fontSize: 14,
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
   modalButton: {
-     flex: 1,
+    flex: 1,
     padding: 12,
     marginHorizontal: 5,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   referralContainer: {
     borderRadius: 10,
     alignItems: "center",
     flexDirection: "row",
   },
-
   referralLabel: {
     fontSize: 12,
     color: "#555",
     fontWeight: "bold",
   },
-
-  referralCode: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFA500",
-  },
-
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
@@ -1054,3 +1087,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
+
+export default HomeScreen;

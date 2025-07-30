@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-// import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import Constants from "expo-constants";
@@ -21,6 +20,7 @@ import { StatusBar } from "react-native";
 import Toast from "react-native-toast-message";
 import useStore from "../../store/useStore";
 import HeaderWithBack from "../component/headerWithBack";
+import { useTranslation } from "react-i18next";
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
@@ -55,6 +55,7 @@ const canceledBooking = async (formData: any) => {
 };
 
 const MyBookingUpcoming = () => {
+  const { t } = useTranslation();
   const [currentBooking, setCurrentBooking] = useState(null);
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const queryClient = useQueryClient();
@@ -77,7 +78,6 @@ const MyBookingUpcoming = () => {
     setCurrentBooking(null);
     bottomSheetModalRef.current?.dismiss();
   };
-
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["getListBooking", customerId],
@@ -117,19 +117,20 @@ const MyBookingUpcoming = () => {
       bottomSheetModalRef.current?.dismiss();
       Toast.show({
         type: "success",
-        text2: "Appointment berhsil dicancel!",
+        text1: t("successTitle"),
+        text2: t("bookingCancelSuccess"),
         position: "top",
         visibilityTime: 2000,
       });
       queryClient.invalidateQueries(["getListBooking", customerId]);
-
     },
     onError: (error) => {
       setCurrentBooking(null);
       bottomSheetModalRef.current?.dismiss();
       Toast.show({
         type: "error",
-        text2: "Appointment gagal dicancel!",
+        text1: t("errorTitle"),
+        text2: t("bookingCancelFailed"),
         position: "top",
         visibilityTime: 2000,
       });
@@ -155,7 +156,6 @@ const MyBookingUpcoming = () => {
     setSwitchStates((prevState) => {
       const updated = [...prevState];
       updated[index] = willBeEnabled;
-
       return updated;
     });
     if (willBeEnabled) {
@@ -175,8 +175,11 @@ const MyBookingUpcoming = () => {
       if (dateOnly > now) {
         Notifications.scheduleNotificationAsync({
           content: {
-            title: "Hari ini kamu ada booking!",
-            body: `${booking.SERVICE} di ${booking.LOCATIONNAME}`,
+            title: t("notification.bookingTodayTitle"),
+            body: t("notification.bookingTodayBody", {
+              service: booking.SERVICE,
+              location: booking.LOCATIONNAME
+            }),
             sound: true,
           },
           trigger: { type: "date", date: dateOnly },
@@ -186,8 +189,12 @@ const MyBookingUpcoming = () => {
       if (twoHoursBefore > now) {
         Notifications.scheduleNotificationAsync({
           content: {
-            title: "Kamu ada appointment 2 jam lagi!",
-            body: `${booking.SERVICE} jam ${booking.TIME} di ${booking.LOCATIONNAME}`,
+            title: t("notification.bookingReminderTitle"),
+            body: t("notification.bookingReminderBody", {
+              service: booking.SERVICE,
+              time: booking.TIME,
+              location: booking.LOCATIONNAME
+            }),
             sound: true,
           },
           trigger: { type: "date", date: twoHoursBefore },
@@ -214,7 +221,7 @@ const MyBookingUpcoming = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <HeaderWithBack title="History Treatment" useGoBack />
+      <HeaderWithBack title={t("myHistory")} useGoBack />
       <StatusBar
         translucent
         backgroundColor="transparent"
@@ -233,7 +240,7 @@ const MyBookingUpcoming = () => {
               mode === "upcoming" && styles.activeTabText,
             ]}
           >
-            Upcoming
+            {t("upcomingAppointments")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -248,7 +255,7 @@ const MyBookingUpcoming = () => {
               mode === "completed" && styles.activeTabText,
             ]}
           >
-            Completed
+            {t("completed")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -263,7 +270,7 @@ const MyBookingUpcoming = () => {
               mode === "canceled" && styles.activeTabText,
             ]}
           >
-            Canceled
+            {t("canceled")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -274,18 +281,11 @@ const MyBookingUpcoming = () => {
         }
       >
         {mode == "upcoming" ? (
-          <View
-            style={{
-              flex: 1,
-              marginBottom: 30,
-              // paddingHorizontal: 20,
-              marginTop: 10,
-            }}
-          >
+          <View style={styles.bookingListContainer}>
             {isLoading ? (
-              <Text>Loading...</Text>
+              <Text>{t("loading")}</Text>
             ) : error ? (
-              <Text>Error..</Text>
+              <Text>{t("errorLoading")}</Text>
             ) : data?.customerbooking?.length > 0 ? (
               data.customerbooking.map((booking: any, index: number) => {
                 const formattedDate = new Date(
@@ -296,30 +296,14 @@ const MyBookingUpcoming = () => {
                   day: "numeric",
                 });
                 return (
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderRadius: 10,
-                      paddingHorizontal: 10,
-                      borderColor: "#ECEFF3",
-                      marginBottom: 10,
-                    }}
-                    key={index}
-                  >
+                  <View style={styles.bookingCard} key={index}>
                     <View style={styles.bookingContainer}>
-                      <View
-                        style={{
-                          display: "flex",
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
+                      <View style={styles.bookingHeader}>
                         <Text style={styles.dateText}>
                           {formattedDate} ({booking.TIME})
                         </Text>
                         <View style={styles.remindButton}>
-                          <Text style={styles.remindText}>Remind me</Text>
+                          <Text style={styles.remindText}>{t("remindMe")}</Text>
                           <Switch
                             style={styles.switch}
                             trackColor={{ false: "#ccc", true: "#B0174C" }}
@@ -345,7 +329,9 @@ const MyBookingUpcoming = () => {
                           <Text style={styles.clinicAddress}>
                             {booking.ADDRESS}
                           </Text>
-                          <Text style={styles.servicesTitle}>Services:</Text>
+                          <Text style={styles.servicesTitle}>
+                            {t("services")}:
+                          </Text>
                           <Text style={styles.servicesText}>
                             {booking.SERVICE}
                           </Text>
@@ -358,7 +344,9 @@ const MyBookingUpcoming = () => {
                             handlePresentModalPress(booking.BOOKINGID)
                           }
                         >
-                          <Text style={styles.cancelText}>Cancel Booking</Text>
+                          <Text style={styles.cancelText}>
+                            {t("cancelBooking")}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -368,26 +356,19 @@ const MyBookingUpcoming = () => {
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="medkit-outline" size={60} color="#E0E0E0" />
-                <Text style={styles.emptyTitle}>No History found</Text>
+                <Text style={styles.emptyTitle}>{t("noHistoryFound")}</Text>
                 <Text style={styles.emptySubtitle}>
-                  You don't have any upcoming appointment yet
+                  {t("noUpcomingAppointments")}
                 </Text>
               </View>
             )}
           </View>
         ) : mode == "completed" ? (
-          <View
-            style={{
-              flex: 1,
-              marginBottom: 30,
-              // paddingHorizontal: 20,
-              marginTop: 10,
-            }}
-          >
+          <View style={styles.bookingListContainer}>
             {isLoadingCompeletd ? (
-              <Text>Loading...</Text>
+              <Text>{t("loading")}</Text>
             ) : errorCompleted ? (
-              <Text>Error..</Text>
+              <Text>{t("errorLoading")}</Text>
             ) : dataCompleted?.customerbooking?.length > 0 ? (
               dataCompleted.customerbooking.map(
                 (booking: any, index: number) => {
@@ -399,25 +380,9 @@ const MyBookingUpcoming = () => {
                     day: "numeric",
                   });
                   return (
-                    <View
-                      style={{
-                        borderWidth: 1,
-                        borderRadius: 10,
-                        paddingHorizontal: 10,
-                        borderColor: "#ECEFF3",
-                        marginBottom: 10,
-                      }}
-                      key={index}
-                    >
+                    <View style={styles.bookingCard} key={index}>
                       <View style={styles.bookingContainer}>
-                        <View
-                          style={{
-                            display: "flex",
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
+                        <View style={styles.bookingHeader}>
                           <Text style={styles.dateText}>
                             {formattedDate} ({booking.TIME})
                           </Text>
@@ -437,7 +402,9 @@ const MyBookingUpcoming = () => {
                             <Text style={styles.clinicAddress}>
                               {booking.ADDRESS}
                             </Text>
-                            <Text style={styles.servicesTitle}>Services:</Text>
+                            <Text style={styles.servicesTitle}>
+                              {t("services")}:
+                            </Text>
                             <Text style={styles.servicesText}>
                               {booking.SERVICE}
                             </Text>
@@ -451,26 +418,19 @@ const MyBookingUpcoming = () => {
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="medkit-outline" size={60} color="#E0E0E0" />
-                <Text style={styles.emptyTitle}>No History found</Text>
+                <Text style={styles.emptyTitle}>{t("noHistoryFound")}</Text>
                 <Text style={styles.emptySubtitle}>
-                  You don't have any treatment history yet
+                  {t("noCompletedAppointments")}
                 </Text>
               </View>
             )}
           </View>
         ) : (
-          <View
-            style={{
-              flex: 1,
-              marginBottom: 30,
-              // paddingHorizontal: 20,
-              marginTop: 10,
-            }}
-          >
+          <View style={styles.bookingListContainer}>
             {isLoadingCanceled ? (
-              <Text>Loading...</Text>
+              <Text>{t("loading")}</Text>
             ) : errorCanceled ? (
-              <Text>Error..</Text>
+              <Text>{t("errorLoading")}</Text>
             ) : dataCanceled?.customerbooking?.length > 0 ? (
               dataCanceled.customerbooking.map(
                 (booking: any, index: number) => {
@@ -482,25 +442,9 @@ const MyBookingUpcoming = () => {
                     day: "numeric",
                   });
                   return (
-                    <View
-                      style={{
-                        borderWidth: 1,
-                        borderRadius: 10,
-                        paddingHorizontal: 10,
-                        borderColor: "#ECEFF3",
-                        marginBottom: 10,
-                      }}
-                      key={index}
-                    >
+                    <View style={styles.bookingCard} key={index}>
                       <View style={styles.bookingContainer}>
-                        <View
-                          style={{
-                            display: "flex",
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
+                        <View style={styles.bookingHeader}>
                           <Text style={styles.dateText}>
                             {formattedDate} ({booking.TIME})
                           </Text>
@@ -520,7 +464,9 @@ const MyBookingUpcoming = () => {
                             <Text style={styles.clinicAddress}>
                               {booking.ADDRESS}
                             </Text>
-                            <Text style={styles.servicesTitle}>Services:</Text>
+                            <Text style={styles.servicesTitle}>
+                              {t("services")}:
+                            </Text>
                             <Text style={styles.servicesText}>
                               {booking.SERVICE}
                             </Text>
@@ -534,9 +480,9 @@ const MyBookingUpcoming = () => {
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="medkit-outline" size={60} color="#E0E0E0" />
-                <Text style={styles.emptyTitle}>No History found</Text>
+                <Text style={styles.emptyTitle}>{t("noHistoryFound")}</Text>
                 <Text style={styles.emptySubtitle}>
-                  You don't have any canceled booking
+                  {t("noCanceledAppointments")}
                 </Text>
               </View>
             )}
@@ -551,23 +497,23 @@ const MyBookingUpcoming = () => {
         backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
       >
         <BottomSheetView style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Cancel Booking</Text>
+          <Text style={styles.modalTitle}>{t("cancelBooking")}</Text>
           <Text style={styles.modalMessage}>
-            Are you sure you want to cancel this booking?
+            {t("confirmCancelBooking")}
           </Text>
           <View style={styles.modalButtons}>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: "#ccc" }]}
               onPress={handleCancel}
             >
-              <Text style={styles.modalButtonText}>Cancel</Text>
+              <Text style={styles.modalButtonText}>{t("cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: "#f87171" }]}
               onPress={confirmCanceledBooking}
             >
               <Text style={[styles.modalButtonText, { color: "white" }]}>
-                Confirm
+                {t("confirm")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -584,14 +530,6 @@ const styles = StyleSheet.create({
   },
   switch: {
     marginLeft: 2,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  searchButton: {
-    padding: 10,
   },
   tabsContainer: {
     flexDirection: "row",
@@ -619,8 +557,26 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+  bookingListContainer: {
+    flex: 1,
+    marginBottom: 30,
+    marginTop: 10,
+  },
+  bookingCard: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    borderColor: "#ECEFF3",
+    marginBottom: 10,
+  },
   bookingContainer: {
     paddingVertical: 15,
+  },
+  bookingHeader: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   row: {
     flexDirection: "row",
@@ -637,8 +593,6 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    // fontWeight: "bold",
-    // marginBottom: 10,
   },
   remindButton: {
     flexDirection: "row",
@@ -648,7 +602,6 @@ const styles = StyleSheet.create({
   remindText: {
     color: "#A4ACB9",
     fontSize: 14,
-    // fontWeight: "bold",
   },
   clinicName: {
     fontSize: 18,
@@ -687,17 +640,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
   },
-  receiptButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: "#B0174C",
-    borderRadius: 5,
-  },
-  receiptText: {
-    color: "#B0174C",
-    fontWeight: "bold",
-  },
   divider: {
     height: 1,
     backgroundColor: "#eee",
@@ -723,7 +665,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   modalButton: {
-     flex: 1,
+    flex: 1,
     padding: 12,
     marginHorizontal: 5,
     borderRadius: 8,
@@ -732,25 +674,6 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 10,
-    // paddingTop: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  headerButton: {
-    padding: 8,
-  },
-  mainHeader: {
-    fontSize: 17,
-    fontWeight: "bold",
-    textAlign: "center",
-    flex: 1,
-    marginLeft: -50,
   },
   emptyContainer: {
     flex: 1,

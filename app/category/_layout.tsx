@@ -12,7 +12,37 @@ export default function RootLayout() {
         }}
       />
       <Stack.Screen
+        name="face"
+        options={{
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="body"
+        options={{
+          headerShown: false
+        }}
+      />
+        <Stack.Screen
+        name="product"
+        options={{
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
         name="more-category"
+        options={{
+          headerShown: false
+        }}
+      />
+       <Stack.Screen
+        name="anti-aging"
+        options={{
+          headerShown: false
+        }}
+      />
+       <Stack.Screen
+        name="detailproduct"
         options={{
           headerShown: false
         }}

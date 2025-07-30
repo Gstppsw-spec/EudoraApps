@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import useStore from "../../../store/useStore";
+import { useTranslation } from "react-i18next"; // Added translation import
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 const apiKey = Constants.expoConfig?.extra?.apiKey;
@@ -22,14 +23,14 @@ const apiKey = Constants.expoConfig?.extra?.apiKey;
 const getLocationDetail = async ({ queryKey }: any) => {
   const [, locationId] = queryKey;
   const res = await fetch(`${apiUrl}/getClinicById/${locationId}`);
-  if (!res.ok) throw new Error("Network error");
+  if (!res.ok) throw new Error(t('networkError')); // Translated error
   return res.json();
 };
 
 const getDoctorClinic = async ({ queryKey }: any) => {
   const [, locationId] = queryKey;
   const res = await fetch(`${apiUrl}/getDoctorByLocationId/${locationId}`);
-  if (!res.ok) throw new Error("Network error");
+  if (!res.ok) throw new Error(t('networkError')); // Translated error
   return res.json();
 };
 
@@ -44,7 +45,7 @@ const getPlaceIdByName = async (clinicName: string) => {
   if (data.status === "OK" && data.candidates.length > 0) {
     return data.candidates[0].place_id;
   } else {
-    console.warn("Gagal menemukan place_id:", data.status);
+    console.warn(t('placeIdError'), data.status); // Translated warning
     return null;
   }
 };
@@ -61,7 +62,7 @@ const getGooglePlaceRating = async (placeId: string) => {
       reviews: data.result.user_ratings_total,
     };
   } else {
-    console.warn("Gagal mengambil rating:", data.status);
+    console.warn(t('ratingError'), data.status); // Translated warning
     return {
       rating: null,
       reviews: null,
@@ -70,8 +71,10 @@ const getGooglePlaceRating = async (placeId: string) => {
 };
 
 const ClinicDetailScreen = () => {
+  const { t } = useTranslation(); // Translation hook
   const router = useRouter();
   const locationId = useStore((state: { locationId: any }) => state.locationId);
+  const currentLanguage = useStore((state) => state.lang);
 
   const {
     data: clinicData,
@@ -80,7 +83,7 @@ const ClinicDetailScreen = () => {
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: ["getClinicById", locationId],
+    queryKey: ["getClinicById", locationId, currentLanguage], // Added language to query key
     queryFn: getLocationDetail,
     enabled: !!locationId,
   });
@@ -112,62 +115,62 @@ const ClinicDetailScreen = () => {
     refetch: refetchDoctor,
     isRefetching: isRefetchingDoctor,
   } = useQuery({
-    queryKey: ["getDoctorByLocationId", locationId],
+    queryKey: ["getDoctorByLocationId", locationId, currentLanguage], // Added language to query key
     queryFn: getDoctorClinic,
     enabled: !!locationId,
   });
 
   const handleWhatsAppPress = (whatsappNumber: any) => {
-    const message = "Halo, saya ingin bertanya."; // isi pesan default
+    const message = t('defaultWhatsAppMessage'); // Translated default message
     const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
       message
     )}`;
     Linking.openURL(url).catch((err) => {
-      console.error("Gagal membuka WhatsApp:", err);
+      console.error(t('whatsappError'), err); // Translated error
     });
   };
 
   const handleCallPress = (whatsappNumber: any) => {
     const telUrl = `tel:${whatsappNumber}`;
     Linking.openURL(telUrl).catch((err) =>
-      console.error("Gagal membuka aplikasi telepon:", err)
+      console.error(t('callError'), err) // Translated error
     );
   };
 
   const handleOpenMap = () => {
     const address =
-      clinicData?.clinicEuodora[0]?.address || "Bintaro Jaya Exchange";
+      clinicData?.clinicEuodora[0]?.address || t('defaultClinicAddress'); // Translated default address
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
       address
     )}`;
     Linking.openURL(url).catch((err) =>
-      console.error("Gagal membuka Google Maps:", err)
+      console.error(t('mapsError'), err) // Translated error
     );
   };
 
   const handleShare = async () => {
     try {
       const result = await Share.share({
-        message: `Cek klinik ${
-          clinicData?.clinicEuodora[0]?.name || "EUDORA Clinic"
-        } di sini:\n\nAlamat: ${
-          clinicData?.clinicEuodora[0]?.address || "Bintaro Jaya Exchange"
-        }\n\nGoogle Maps: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          clinicData?.clinicEuodora[0]?.address || "Bintaro Jaya Exchange"
-        )}`,
+        message: t('shareMessage', { // Translated share message with interpolation
+          clinicName: clinicData?.clinicEuodora[0]?.name || t('defaultClinicName'),
+          address: clinicData?.clinicEuodora[0]?.address || t('defaultClinicAddress'),
+          encodedAddress: encodeURIComponent(
+            clinicData?.clinicEuodora[0]?.address || t('defaultClinicAddress')
+          )
+        })
       });
 
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
-          console.log("Shared with activity type:", result.activityType);
+          console.log(t('sharedWithActivity'), result.activityType); // Translated log
         } else {
-          console.log("Klinik dibagikan.");
+          console.log(t('clinicShared')); // Translated log
         }
       } else if (result.action === Share.dismissedAction) {
-        console.log("Share dibatalkan.");
+        console.log(t('shareCancelled')); // Translated log
       }
     } catch (error) {
-      console.error("Gagal share:", error.message);
+      console.error(t('shareError'), error.message); // Translated error
     }
   };
 
@@ -175,6 +178,7 @@ const ClinicDetailScreen = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
+        <Text style={styles.loadingText}>{t('loading')}</Text>
       </View>
     );
   }
@@ -182,7 +186,12 @@ const ClinicDetailScreen = () => {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text>Error loading messages: {error.message}</Text>
+        <Text style={styles.errorText}>
+          {t('errorLoading')}: {error.message}
+        </Text>
+        <TouchableOpacity onPress={refetch} style={styles.retryButton}>
+          <Text style={styles.retryButtonText}>{t('retry')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -209,7 +218,7 @@ const ClinicDetailScreen = () => {
           ) : (
             <View style={styles.placeholder}>
               <Text style={styles.placeholderText}>
-                Clinic Image Unavailable
+                {t('noClinicImage')}
               </Text>
             </View>
           )}
@@ -217,43 +226,29 @@ const ClinicDetailScreen = () => {
           <View style={styles.headerContainer}>
             <View style={{ paddingHorizontal: 15, marginTop: 15 }}>
               <Text style={styles.clinicName}>
-                {clinicData?.clinicEuodora[0]?.name ||
-                  "EUDORA Bintaro Exchange"}
+                {clinicData?.clinicEuodora[0]?.name || t('defaultClinicName')}
               </Text>
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                }}
-              >
+              <View style={styles.addressContainer}>
                 <FontAwesome
-                  style={{ marginRight: 13 }}
+                  style={styles.addressIcon}
                   name="map-marker"
                   size={15}
                   color="#B0174C"
                 />
                 <Text style={styles.clinicAddress}>
-                  {clinicData?.clinicEuodora[0]?.address ||
-                    "Bintaro Jaya Exchange"}
+                  {clinicData?.clinicEuodora[0]?.address || t('defaultClinicAddress')}
                 </Text>
               </View>
 
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                }}
-              >
+              <View style={styles.ratingContainer}>
                 <FontAwesome
-                  style={{ marginRight: 10 }}
+                  style={styles.ratingIcon}
                   name="star"
                   size={15}
                   color="#B0174C"
                 />
                 <Text style={styles.rating}>
-                  {googleRating?.rating} ({googleRating?.reviews} reviews)
+                  {googleRating?.rating} ({googleRating?.reviews} {t('reviews')})
                 </Text>
               </View>
             </View>
@@ -269,7 +264,7 @@ const ClinicDetailScreen = () => {
                 <View style={styles.actionIconCircle}>
                   <FontAwesome name="envelope" size={20} color="#B0174C" />
                 </View>
-                <Text style={styles.actionButtonText}>Message</Text>
+                <Text style={styles.actionButtonText}>{t('message')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -281,7 +276,7 @@ const ClinicDetailScreen = () => {
                 <View style={styles.actionIconCircle}>
                   <FontAwesome name="phone" size={20} color="#B0174C" />
                 </View>
-                <Text style={styles.actionButtonText}>Call</Text>
+                <Text style={styles.actionButtonText}>{t('call')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -291,7 +286,7 @@ const ClinicDetailScreen = () => {
                 <View style={styles.actionIconCircle}>
                   <FontAwesome name="map-marker" size={20} color="#B0174C" />
                 </View>
-                <Text style={styles.actionButtonText}>Direction</Text>
+                <Text style={styles.actionButtonText}>{t('direction')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -301,24 +296,17 @@ const ClinicDetailScreen = () => {
                 <View style={styles.actionIconCircle}>
                   <FontAwesome name="share-alt" size={20} color="#B0174C" />
                 </View>
-                <Text style={styles.actionButtonText}>Share</Text>
+                <Text style={styles.actionButtonText}>{t('share')}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Clinic Schedule</Text>
+              <Text style={styles.sectionTitle}>{t('clinicSchedule')}</Text>
             </View>
-            <View
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-                flexDirection: "row",
-                justifyContent: "space-between",
-              }}
-            >
-              <Text>Monday - Sunday</Text>
+            <View style={styles.scheduleContainer}>
+              <Text>{t('mondayToSunday')}</Text>
               <Text>{clinicData?.clinicEuodora[0]?.operationalTime}</Text>
             </View>
 
@@ -326,17 +314,11 @@ const ClinicDetailScreen = () => {
 
             {/* Our Doctors Section */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Our doctor & Team</Text>
+              <Text style={styles.sectionTitle}>{t('ourDoctors')}</Text>
               <Link href={"/staff/list-staff"} asChild>
                 <TouchableOpacity>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "bold",
-                      color: "#B0174C",
-                    }}
-                  >
-                    See All
+                  <Text style={styles.seeAllText}>
+                    {t('seeAll')}
                   </Text>
                 </TouchableOpacity>
               </Link>
@@ -353,14 +335,7 @@ const ClinicDetailScreen = () => {
                       }}
                       style={styles.doctorImage}
                     />
-                    <View
-                      style={{
-                        flex: 1,
-                        marginLeft: 12,
-                        justifyContent: "center",
-                        gap: 4,
-                      }}
-                    >
+                    <View style={styles.doctorInfo}>
                       <Text style={styles.doctorName}>{doctor.name}</Text>
                       <Text style={styles.doctorRole}>{doctor.expertise}</Text>
                     </View>
@@ -371,10 +346,10 @@ const ClinicDetailScreen = () => {
           </View>
         </View>
       </ScrollView>
-      <View style={{ backgroundColor: "white" }}>
+      <View style={styles.footer}>
         <Link href="/bookappointment/booking" asChild style={styles.bookButton}>
           <TouchableOpacity>
-            <Text style={styles.bookButtonText}>Book Now</Text>
+            <Text style={styles.bookButtonText}>{t('bookNow')}</Text>
           </TouchableOpacity>
         </Link>
       </View>
@@ -385,7 +360,7 @@ const ClinicDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "fff",
+    backgroundColor: "#fff",
   },
   backButton: {
     position: "absolute",
@@ -398,17 +373,17 @@ const styles = StyleSheet.create({
   },
   clinicImage: {
     width: "100%",
-    height: 250, // tinggi gambar (bisa disesuaikan)
+    height: 250,
   },
   placeholder: {
     width: "100%",
     height: 250,
-    backgroundColor: "#ccc",
+    backgroundColor: "#f5f5f5",
     justifyContent: "center",
     alignItems: "center",
   },
   placeholderText: {
-    color: "#ccc",
+    color: "#666",
     fontSize: 16,
   },
   headerContainer: {
@@ -419,14 +394,29 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   clinicName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
+    color: "#333",
+  },
+  addressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  addressIcon: {
+    marginRight: 10,
   },
   clinicAddress: {
     fontSize: 14,
     color: "#666",
-    marginBottom: 4,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ratingIcon: {
+    marginRight: 10,
   },
   rating: {
     fontSize: 14,
@@ -471,10 +461,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    color: "#333",
   },
-  seeAll: {
-    fontSize: 16,
-    color: "#FFB900",
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#B0174C",
+  },
+  scheduleContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   doctorCard: {
     flexDirection: "row",
@@ -496,7 +494,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
     resizeMode: "cover",
-    backgroundColor: "#ccc",
+    backgroundColor: "#f5f5f5",
+  },
+  doctorInfo: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: "center",
+    gap: 4,
   },
   doctorName: {
     fontSize: 16,
@@ -509,12 +513,11 @@ const styles = StyleSheet.create({
   },
   bookButton: {
     backgroundColor: "#B0174C",
-    padding: 10,
+    padding: 16,
     borderRadius: 8,
     alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 5,
-    marginBottom: 5,
+    marginVertical: 8,
   },
   bookButtonText: {
     color: "#fff",
@@ -526,10 +529,34 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#666",
+  },
+  errorText: {
+    color: "#f87171",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: "#B0174C",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   doctorsContainer: {
     marginHorizontal: 5,
     marginTop: 12,
+  },
+  footer: {
+    backgroundColor: "white",
+    paddingBottom: 8,
   },
 });
 

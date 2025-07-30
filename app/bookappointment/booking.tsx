@@ -21,6 +21,7 @@ import { Calendar } from "react-native-calendars";
 import Toast from "react-native-toast-message";
 import HeaderWithBack from "../../app/component/headerWithBack";
 import useStore from "../../store/useStore";
+import { useTranslation } from "react-i18next";
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
@@ -51,11 +52,12 @@ const fetchListService = async () => {
 };
 
 const BookingAppointmentScreen = () => {
+  const { t } = useTranslation();
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false); // State for modal visibility
+  const [modalVisible, setModalVisible] = useState(false);
   const locationId = useStore((state: { locationId: any }) => state.locationId);
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const [remarks, setRemarks] = useState(null);
@@ -78,7 +80,7 @@ const BookingAppointmentScreen = () => {
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-    }, 300); // delay 300ms
+    }, 300);
 
     return () => clearTimeout(timeout);
   }, [searchQuery]);
@@ -102,16 +104,18 @@ const BookingAppointmentScreen = () => {
     onSuccess: (data) => {
       Toast.show({
         type: "success",
-        text2: "Appointment berhasil dibuat!",
+        text1: t("success"),
+        text2: t("appointmentSuccess"),
         position: "top",
         visibilityTime: 2000,
       });
-      router.push("/mybooking/myBooking");
-    },
+      router.push("/mybooking/mybooking");
+    },  
     onError: (error) => {
       Toast.show({
         type: "error",
-        text2: "Appointment gagal dibuat!",
+        text1: t("error"),
+        text2: t("appointmentFailed"),
         position: "top",
         visibilityTime: 2000,
       });
@@ -129,14 +133,20 @@ const BookingAppointmentScreen = () => {
         employeeid: selectedEmployee,
       });
     } else {
-      alert("Please select a date, a time and treatment .");
+      Toast.show({
+        type: "error",
+        text1: t("error"),
+        text2: t("selectAllFields"),
+        position: "top",
+        visibilityTime: 2000,
+      });
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <HeaderWithBack
-        title="Book Appointment"
+        title={t("bookAppointment")}
         backHref="/tabs/clinic/details"
       />
       <ScrollView
@@ -176,7 +186,6 @@ const BookingAppointmentScreen = () => {
           }}
         />
 
-        {/* <Text style={styles.subHeader}>Select Time</Text> */}
         <View style={styles.timeContainer}>
           {isLoading ? (
             <View style={styles.center}>
@@ -184,7 +193,7 @@ const BookingAppointmentScreen = () => {
             </View>
           ) : error ? (
             <Text style={styles.timeText}>
-              Terjadi kesalahan saat mengambil data
+              {t("fetchError")}
             </Text>
           ) : availableTime?.availableTimeEmployee?.length > 0 ? (
             availableTime.availableTimeEmployee.map(
@@ -212,18 +221,17 @@ const BookingAppointmentScreen = () => {
               )
             )
           ) : (
-            <Text style={styles.timeText}>Tidak ada waktu tersedia</Text>
+            <Text style={styles.timeText}>{t("noAvailableTime")}</Text>
           )}
         </View>
 
         <View style={styles.sectionContainer}>
-          {/* <Text style={styles.sectionTitle}>SELECT TREATMENT</Text> */}
           <Pressable
             style={styles.input}
             onPress={() => setShowTreatmentModal(true)}
           >
             <Text style={styles.inputText}>
-              {remarks || "Select Treatment"}
+              {remarks || t("selectTreatment")}
             </Text>
             <Ionicons name="chevron-down" size={20} color="#666" />
           </Pressable>
@@ -237,7 +245,6 @@ const BookingAppointmentScreen = () => {
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              {/* <Text style={styles.headerText}>Pilih Treatment</Text> */}
               <View style={styles.searchContainer}>
                 <FontAwesome
                   name="search"
@@ -247,7 +254,7 @@ const BookingAppointmentScreen = () => {
                 />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="SEARCH TREATMENT"
+                  placeholder={t("searchTreatment")}
                   onChangeText={(text) => setSearchQuery(text)}
                   value={searchQuery}
                   placeholderTextColor="#999"
@@ -276,7 +283,7 @@ const BookingAppointmentScreen = () => {
                 style={styles.closeButton}
                 onPress={() => setShowTreatmentModal(false)}
               >
-                <Text style={styles.closeButtonText}>Tutup</Text>
+                <Text style={styles.closeButtonText}>{t("close")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -290,7 +297,7 @@ const BookingAppointmentScreen = () => {
             color="#fff"
             style={{ marginRight: 8 }}
           />
-          <Text style={styles.buttonText}>BOOK</Text>
+          <Text style={styles.buttonText}>{t("book")}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -316,7 +323,7 @@ const styles = StyleSheet.create({
   },
   calendar: {
     borderRadius: 10,
-    elevation: 2, // Android shadow
+    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -354,7 +361,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#B0174C",
     padding: 15,
     alignItems: "center",
-    flexDirection: "row", // ⬅️ Penting untuk ikon dan teks sejajar
+    flexDirection: "row",
     justifyContent: "center",
   },
   buttonText: {
@@ -366,9 +373,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Dimmed background
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-
   modalText: {
     fontSize: 18,
     marginBottom: 20,
@@ -379,7 +385,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-
   textArea: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -393,7 +398,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 10,
-    // paddingTop: 50,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },
@@ -484,17 +488,17 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
-    width: "90%", // Width of the modal
+    width: "90%",
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 20,
     height: "50%",
-    elevation: 5, // Optional shadow for Android
+    elevation: 5,
   },
   modalHeader: {
     alignItems: "center",
@@ -534,11 +538,9 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     height: 40,
   },
-
   searchIcon: {
     marginRight: 8,
   },
-
   searchInput: {
     flex: 1,
     fontSize: 14,

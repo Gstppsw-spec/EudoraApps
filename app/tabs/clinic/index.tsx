@@ -13,27 +13,38 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-import useClinicDistances from "@/app/hooks/useDistanceToClinic";
-import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { useQuery } from "@tanstack/react-query";
+import useClinicDistances from "@/app/hooks/useDistanceToClinic";
 import useStore from "../../../store/useStore";
-
 import Constants from 'expo-constants';
-const apiUrl = Constants.expoConfig?.extra?.apiUrl 
+import { useTranslation } from "react-i18next";
 
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
-const fetchListClinic = async () => {
-  const res = await fetch(
-    `${apiUrl}/getClinic`
-  );
+interface Clinic {
+  id: string;
+  name: string;
+  address: string;
+  mobilephone: string;
+  image: string;
+}
+
+interface ClinicResponse {
+  clinicEuodora: Clinic[];
+}
+
+const fetchListClinic = async (): Promise<ClinicResponse> => {
+  const res = await fetch(`${apiUrl}/getClinic`);
   if (!res.ok) throw new Error("Network response was not ok");
   return res.json();
 };
 
 const IndexScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const setLocationId = useStore((state) => state.setLocationId);
+  const currentLanguage = useStore((state) => state.lang);
 
   const {
     data: dataclinic,
@@ -41,8 +52,8 @@ const IndexScreen: React.FC = () => {
     isLoading: isLoadingclinic,
     isRefetching,
     refetch,
-  } = useQuery({
-    queryKey: ["getClinic"],
+  } = useQuery<ClinicResponse>({
+    queryKey: ["getClinic", currentLanguage],
     queryFn: fetchListClinic,
   });
 
@@ -56,6 +67,7 @@ const IndexScreen: React.FC = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
+        <Text style={styles.loadingText}>{t('loading')}</Text>
       </View>
     );
   }
@@ -63,16 +75,20 @@ const IndexScreen: React.FC = () => {
   if (errorclinic) {
     return (
       <View style={styles.center}>
-        <Text>Error loading messages: {errorclinic.message}</Text>
+        <Text style={styles.errorText}>
+          {t('errorLoading')}: {errorclinic.message}
+        </Text>
+        <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
+          <Text style={styles.retryButtonText}>{t('retry')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.mainHeader}>OUR CLINIC</Text>
+        <Text style={styles.mainHeader}>{t('ourClinic')}</Text>
       </View>
       <StatusBar
         translucent
@@ -83,70 +99,68 @@ const IndexScreen: React.FC = () => {
       <ScrollView
         style={styles.scrollContainer}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={isRefetching} 
+            onRefresh={onRefresh}
+            tintColor="#B0174C"
+          />
         }
       >
-        {isLoadingclinic ? (
-          <Text>Loading...</Text>
-        ) : errorclinic ? (
-          <Text>Terjadi kesalahan saat mengambil data</Text>
+        {dataclinic?.clinicEuodora.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>{t('noClinicsAvailable')}</Text>
+          </View>
         ) : (
-          dataclinic.clinicEuodora.map((clinic: any, index: number) => {
-            return (
-              <View key={index} style={styles.clinicCardContainer}>
-                <Link
-                  href={{ pathname: "/tabs/clinic/details", params: clinic }}
-                  onPress={() => setLocationId(clinic.id)}
-                  asChild
-                >
-                  <TouchableOpacity style={styles.clinicCard}>
-                    <View>
-                      <Image
-                        source={{
-                          uri: `${apiUrl}/upload/${clinic.image}`,
-                        }}
-                        style={styles.clinicImage}
-                      />
-                    </View>
-                    <View>
-                      <View style={styles.clinicInfo}>
-                        <Text style={styles.clinicName}>{clinic.name}</Text>
-                        <Text style={styles.clinicAddress}>
-                          {clinic.address}
+          dataclinic?.clinicEuodora.map((clinic: Clinic, index: number) => (
+            <View key={clinic.id} style={styles.clinicCardContainer}>
+              <Link
+                href={{ pathname: "/tabs/clinic/details", params: clinic }}
+                onPress={() => setLocationId(clinic.id)}
+                asChild
+              >
+                <TouchableOpacity style={styles.clinicCard}>
+                  <Image
+                    source={{ uri: `${apiUrl}/upload/${clinic.image}` }}
+                    style={styles.clinicImage}
+                    contentFit="cover"
+                  />
+                  <View style={styles.clinicInfo}>
+                    <Text style={styles.clinicName}>{clinic.name}</Text>
+                    <Text style={styles.clinicAddress}>{clinic.address}</Text>
+                    <View style={styles.distanceRatingContainer}>
+                      <View style={styles.contactContainer}>
+                        <FontAwesome
+                          name="whatsapp"
+                          size={14}
+                          color="#4CAF50"
+                          style={styles.contactIcon}
+                        />
+                        <Text style={styles.contactText}>
+                          {clinic.mobilephone}
                         </Text>
-                        <View style={styles.distanceRatingContainer}>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                            }}
-                          >
-                            <FontAwesome
-                              name="whatsapp"
-                              size={12}
-                              color="#4CAF50"
-                              style={styles.arrowIcon}
-                            />
-                            <Text style={styles.ratingText}>
-                              {clinic.mobilephone}
-                            </Text>
-                          </View>
-                          <Text style={styles.distanceText}>
-                            {loading
-                              ? "Menghitung..."
-                              : `${distances[clinic.id]?.toFixed(2) ?? "?"} KM`}
-                          </Text>
-                        </View>
+                      </View>
+                      <View style={styles.distanceContainer}>
+                        <FontAwesome
+                          name="map-marker"
+                          size={14}
+                          color="#B0174C"
+                          style={styles.distanceIcon}
+                        />
+                        <Text style={styles.distanceText}>
+                          {loading 
+                            ? t('calculating') 
+                            : `${distances[clinic.id]?.toFixed(2) ?? "?"} ${t('km')}`}
+                        </Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
-                </Link>
-                {index < dataclinic.clinicEuodora.length - 1 && (
-                  <View style={styles.divider} />
-                )}
-              </View>
-            );
-          })
+                  </View>
+                </TouchableOpacity>
+              </Link>
+              {index < dataclinic.clinicEuodora.length - 1 && (
+                <View style={styles.divider} />
+              )}
+            </View>
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -167,14 +181,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e0e0e0",
     paddingTop: StatusBar.currentHeight,
   },
-  headerButton: {
-    padding: 8,
-  },
   mainHeader: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
     flex: 1,
+    color: "#333",
   },
   scrollContainer: {
     flex: 1,
@@ -188,50 +200,94 @@ const styles = StyleSheet.create({
   },
   clinicImage: {
     borderRadius: 8,
-    marginRight: 16,
     width: "100%",
-    height: 120,
-    resizeMode: "cover",
+    height: 180,
+    marginBottom: 12,
+    backgroundColor: '#f5f5f5',
   },
   clinicInfo: {
     flex: 1,
-    justifyContent: "center",
   },
   clinicName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "bold",
-    marginVertical: 8,
+    marginBottom: 4,
+    color: "#333",
   },
   clinicAddress: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#666",
-    marginBottom: 8,
+    marginBottom: 12,
+    lineHeight: 20,
   },
   distanceRatingContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  contactContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  contactIcon: {
+    marginRight: 6,
+  },
+  contactText: {
+    fontSize: 14,
+    color: "#4CAF50",
+  },
+  distanceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  distanceIcon: {
+    marginRight: 6,
+  },
   distanceText: {
     fontSize: 14,
-    color: "#666",
-    marginRight: 8,
-  },
-  arrowIcon: {
-    marginRight: 4,
-  },
-  ratingText: {
-    fontSize: 14,
-    color: "#666",
+    color: "#B0174C",
+    fontWeight: '500',
   },
   divider: {
     height: 1,
     backgroundColor: "#e0e0e0",
+    marginVertical: 8,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#666",
+  },
+  errorText: {
+    color: "#f87171",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: "#B0174C",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
   },
 });
 

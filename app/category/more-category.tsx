@@ -98,7 +98,7 @@ const CategoryCard = ({ category }) => {
   return (
     <TouchableOpacity style={styles.card}>
       <View style={styles.iconContainer}>
-        <Icon name={category.icon} size={30} color="#FFB900" />
+        <Icon name={category.icon} size={30} color="#B0174C" />
       </View>
       <Text style={styles.cardTitle}>{category.name}</Text>
     </TouchableOpacity>
@@ -112,7 +112,7 @@ const ServiceItem = ({ service }) => {
         <Text style={styles.serviceName}>{service.name}</Text>
         <Text style={styles.serviceDescription}>{service.description}</Text>
       </View>
-      <Icon name="chevron-right" size={20} color="#FFB900" />
+      <Icon name="chevron-right" size={20} color="#B0174C" />
     </TouchableOpacity>
   );
 };
@@ -156,11 +156,11 @@ const MoreScreen = () => {
             the latest technology and highest quality products.
           </Text>
           <View style={styles.contactItem}>
-            <Icon name="location-on" size={20} color="#FFB900" />
+            <Icon name="location-on" size={20} color="#B0174C" />
             <Text style={styles.contactText}>123 Beauty Street, Jakarta</Text>
           </View>
           <View style={styles.contactItem}>
-            <Icon name="phone" size={20} color="#FFB900" />
+            <Icon name="phone" size={20} color="#B0174C" />
             <Text style={styles.contactText}>(021) 1234-5678</Text>
           </View>
         </View>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   iconContainer: {
-    backgroundColor: '#FFF8E6',
+    backgroundColor: '#ffffffff',
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFB900',
+    color: '#B0174C',
     marginBottom: 12,
   },
   infoText: {

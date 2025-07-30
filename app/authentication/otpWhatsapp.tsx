@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
@@ -21,34 +21,26 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import CountryPicker, { Country } from "react-native-country-picker-modal";
 import useStore from "../../store/useStore";
-import CountryPicker, { Country } from 'react-native-country-picker-modal';
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const sendOtp = async (formData: any) => {
-  const response = await axios.post(
-    `${apiUrl}/send_otp`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/send_otp`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
 const verifyOtpUser = async (formData: any) => {
-  const response = await axios.post(
-    `${apiUrl}/verify_otp`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await axios.post(`${apiUrl}/verify_otp`, formData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
@@ -67,31 +59,31 @@ export default function Login() {
   const lang = useStore((state) => state.lang);
   const setLang = useStore((state) => state.setLang);
   const setCustomerDetails = useStore((state) => state.setCustomerDetails);
-  
+
   // Country code state
   const [countryCode, setCountryCode] = useState<Country>({
-    callingCode: ['62'],
-    cca2: 'ID',
-    currency: ['IDR'],
-    flag: 'flag-id',
-    name: 'Indonesia',
-    region: 'Asia',
-    subregion: 'South-Eastern Asia'
+    callingCode: ["62"],
+    cca2: "ID",
+    currency: ["IDR"],
+    flag: "flag-id",
+    name: "Indonesia",
+    region: "Asia",
+    subregion: "South-Eastern Asia",
   });
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const handlePhoneChange = (text: string) => {
     // Remove all non-digit characters
-    let cleanedText = text.replace(/[^0-9]/g, '');
-    
+    let cleanedText = text.replace(/[^0-9]/g, "");
+
     // Remove leading zeros
-    if (cleanedText.startsWith('0')) {
+    if (cleanedText.startsWith("0")) {
       cleanedText = cleanedText.substring(1);
     }
-    
+
     // Limit to 15 characters max
     cleanedText = cleanedText.substring(0, 15);
-    
+
     setPhone(cleanedText);
   };
 
@@ -129,13 +121,16 @@ export default function Login() {
     }
 
     if (!isValidPhoneNumber(phone)) {
-      Alert.alert("Error", "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan.");
+      Alert.alert(
+        "Error",
+        "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan."
+      );
       return;
     }
 
     mutation.mutate({
-      phone: phone,
-      countryCode: countryCode.callingCode[0]
+      phone: `0${phone}`,
+      countryCode: countryCode.callingCode[0],
     });
   };
 
@@ -147,12 +142,13 @@ export default function Login() {
         setCustomerId(data.customerId);
         setHasPin(data.has_pin);
         setCustomerDetails({
-          fullname: data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname ,
+          fullname:
+            data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname,
           email: data?.dataCustomer?.email,
           phone: data?.dataCustomer?.cellphonenumber,
           gender: data?.dataCustomer?.sex,
           dateofbirth: data?.dataCustomer?.dateofbirth,
-          locationCustomerRegister: data?.dataCustomer?.locationid
+          locationCustomerRegister: data?.dataCustomer?.locationid,
         });
 
         if (data.has_pin) {
@@ -186,11 +182,11 @@ export default function Login() {
   };
 
   const confirmVerification = () => {
-    setShowConfirmModal(false);
+    setShowConfirmModal(false);    
     mutatioVerifyOtp.mutate({
-      phone: phone,
+      phone: `0${phone}`,
       otp: otp,
-      countryCode: countryCode.callingCode[0]
+      countryCode: countryCode.callingCode[0],
     });
   };
 
@@ -278,11 +274,22 @@ export default function Login() {
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{t("whatsappNumber")}</Text>
                 <View style={styles.inputWrapper}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.prefixContainer}
                     onPress={() => setShowCountryPicker(true)}
                   >
-                    <Text style={styles.prefix}>+{countryCode.callingCode[0]}</Text>
+                    <CountryPicker
+                      visible={showCountryPicker}
+                      withCallingCode
+                      withFilter
+                      withFlag
+                      withAlphaFilter
+                      withCallingCodeButton
+                      withEmoji
+                      onSelect={onSelectCountry}
+                      onClose={() => setShowCountryPicker(false)}
+                      countryCode={countryCode.cca2}
+                    />
                   </TouchableOpacity>
                   <TextInput
                     style={styles.input}
@@ -293,20 +300,6 @@ export default function Login() {
                     onChangeText={handlePhoneChange}
                   />
                 </View>
-                {showCountryPicker && (
-                  <CountryPicker
-                    visible={showCountryPicker}
-                    withCallingCode
-                    withFilter
-                    withFlag
-                    withAlphaFilter
-                    withCallingCodeButton
-                    withEmoji
-                    onSelect={onSelectCountry}
-                    onClose={() => setShowCountryPicker(false)}
-                    countryCode={countryCode.cca2}
-                  />
-                )}
               </View>
             ) : (
               <View style={styles.formGroup}>
@@ -323,7 +316,8 @@ export default function Login() {
                   maxLength={6}
                 />
                 <Text style={styles.otpNote}>
-                  {t("codeSentTo")} +{countryCode.callingCode[0]}{phone}
+                  {t("codeSentTo")} +{countryCode.callingCode[0]}
+                  {phone}
                 </Text>
               </View>
             )}
@@ -533,7 +527,8 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: "#ffffff",
     borderRadius: 24,
-    padding: 32,
+    padding: 20,
+    paddingVertical: 35,
     marginBottom: 24,
     shadowColor: "#000",
     shadowOffset: {
@@ -565,7 +560,7 @@ const styles = StyleSheet.create({
   prefixContainer: {
     backgroundColor: "#e5e7eb",
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 15,
     borderTopLeftRadius: 14,
     borderBottomLeftRadius: 14,
   },
@@ -581,6 +576,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     paddingHorizontal: 16,
     fontWeight: "500",
+    letterSpacing: 0
   },
   phoneHint: {
     fontSize: 12,
@@ -598,6 +594,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: "#f9fafb",
     fontWeight: "600",
+    letterSpacing: 0
   },
   otpNote: {
     fontSize: 13,
