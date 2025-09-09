@@ -13,6 +13,9 @@ const useStore = create(
       profileImage: null, 
       lang: 'en',
       hasOnboarding: false,
+      token: false,
+
+      selectedProducts: [],
 
       customerDetails: {
         fullname: null,
@@ -20,7 +23,8 @@ const useStore = create(
         phone: null,
         gender: null,
         dateofbirth: null,
-        locationCustomerRegister: null
+        locationCustomerRegister: null,
+        token: null
       },
 
       // Reminder list
@@ -33,6 +37,11 @@ const useStore = create(
       clearPendingRoute: () => set({ pendingRoute: null }),
       setLocationId: (id) => set({ locationId: id }),
       setHasOnboarding: (status) => set({ hasOnboarding: status }),
+      setToken: (token) => set({ token: token }),
+      setSelectedProducts: (products: any[]) => set({ selectedProducts: products }),
+      addSelectedProduct: (product: any) => set((state) => ({ selectedProducts: [...state.selectedProducts, product] })),
+      removeSelectedProduct: (id: number) =>set((state) => ({selectedProducts: state.selectedProducts.filter((i) => i.id !== id),})),
+      clearSelectedProducts: () => set({ selectedProducts: [] }),
       clearCustomerId: () =>
         set({
           customerid: null,
@@ -44,7 +53,8 @@ const useStore = create(
             phone: null,
             gender: null,
             dateofbirth: null,
-            locationCustomerRegister: null
+            locationCustomerRegister: null,
+            token: null
           },
         }),
 

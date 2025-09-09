@@ -1,5 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Constants from "expo-constants";
@@ -62,9 +66,6 @@ const NotificationDetail = () => {
     image_url,
     setNotifications: setNotificationsString,
   } = params;
-
-  console.log(image_url);
-  
 
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
@@ -154,6 +155,14 @@ const NotificationDetail = () => {
         snapPoints={snapPoints}
         enablePanDownToClose
         backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+            pressBehavior="close"
+          />
+        )}
       >
         <BottomSheetView style={styles.modalContent}>
           <Text style={styles.modalTitle}>Deleted Notification</Text>
@@ -317,12 +326,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   image: {
-  width: "100%",
-  height: 180,
-  borderRadius: 12,
-  marginBottom: 20,
-},
-
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
 });
 
 export default NotificationDetail;

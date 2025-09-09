@@ -127,22 +127,15 @@ export default function Register() {
   };
 
   const handlePhoneChange = (text: string) => {
-    // Remove all non-digit characters
     let cleanedText = text.replace(/[^0-9]/g, "");
-
-    // Remove leading zeros
     if (cleanedText.startsWith("0")) {
       cleanedText = cleanedText.substring(1);
     }
-
-    // Limit to 15 characters max
     cleanedText = cleanedText.substring(0, 15);
-
     handleChange("phone", cleanedText);
   };
 
   const isValidPhoneNumber = (phone: string) => {
-    // Phone should be 8-15 digits and not start with 0
     const phoneRegex = /^[1-9]\d{7,14}$/;
     return phoneRegex.test(phone);
   };
@@ -166,13 +159,22 @@ export default function Register() {
   const mutation = useMutation({
     mutationFn: sendOtp,
     onSuccess: (data) => {
-      Toast.show({
-        type: "success",
-        text2: "Registrasi berhasil, lakukan verifikasi",
-        position: "top",
-        visibilityTime: 2000,
-      });
-      setStep(2);
+      if (data.status) {
+        Toast.show({
+          type: "success",
+          text2: data.message,
+          position: "top",
+          visibilityTime: 2000,
+        });
+        setStep(2);
+      } else {
+        Toast.show({
+          type: "error",
+          text2: data.message,
+          position: "top",
+          visibilityTime: 2000,
+        });
+      }
     },
     onError: (error) => {
       Toast.show({
@@ -188,7 +190,7 @@ export default function Register() {
     mutationFn: verifyOtp,
     onSuccess: (data) => {
       if (data.status) {
-        setCustomerId(data.customerId);
+        setCustomerId(data.last_customer_id);
         setCustomerDetails({
           fullname:
             data?.dataCustomer?.firstname + " " + data?.dataCustomer?.lastname,
@@ -197,10 +199,17 @@ export default function Register() {
           gender: data?.dataCustomer?.sex,
           dateofbirth: data?.dataCustomer?.dateofbirth,
           locationCustomerRegister: data?.dataCustomer?.locationid,
+          token: data?.token
+        });
+        Toast.show({
+          type: "success",
+          text2: "Registrasi berhasil",
+          position: "top",
+          visibilityTime: 2000,
         });
         router.replace("/authentication/setPin");
       } else {
-        Alert.alert("Error", "OTP Salah atau Kadaluarsa");
+        Alert.alert("Error", data.message);
       }
     },
     onError: (error) => {
@@ -292,7 +301,9 @@ export default function Register() {
 
   const renderWhatsAppInput = () => (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>Whatsapp</Text>
+      <Text style={styles.label}>
+        Whatsapp <Text style={{ color: "red" }}>*</Text>
+      </Text>
       <View style={styles.phoneInputContainer}>
         <TouchableOpacity
           style={styles.countryCodeButton}
@@ -326,7 +337,9 @@ export default function Register() {
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.container}>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Nama Depan</Text>
+                    <Text style={styles.label}>
+                      Nama Depan <Text style={{ color: "red" }}>*</Text>
+                    </Text>
                     <TextInput
                       style={styles.input}
                       value={formData.firstname}
@@ -335,7 +348,9 @@ export default function Register() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Nama Belakang</Text>
+                    <Text style={styles.label}>
+                      Nama Belakang <Text style={{ color: "red" }}>*</Text>
+                    </Text>
                     <TextInput
                       style={styles.input}
                       value={formData.lastname}
@@ -356,7 +371,7 @@ export default function Register() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Nomor KTP</Text>
+                    <Text style={styles.label}>Nomor KTP </Text>
                     <TextInput
                       style={styles.input}
                       value={formData.idNumber}
@@ -389,7 +404,9 @@ export default function Register() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Lokasi Klinik</Text>
+                    <Text style={styles.label}>
+                      Lokasi Klinik <Text style={{ color: "red" }}>*</Text>
+                    </Text>
                     <Pressable
                       style={styles.dropdownContainer}
                       onPress={() => setClinicModalVisible(true)}
@@ -402,7 +419,9 @@ export default function Register() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Jenis Kelamin</Text>
+                    <Text style={styles.label}>
+                      Jenis Kelamin <Text style={{ color: "red" }}>*</Text>
+                    </Text>
                     <View style={styles.radioRow}>
                       {genderOptions.map((item) => (
                         <TouchableOpacity
@@ -424,7 +443,7 @@ export default function Register() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Kode Referal</Text>
+                    <Text style={styles.label}>Kode Referal </Text>
                     <TextInput
                       style={styles.input}
                       value={formData.referralCode}
@@ -436,11 +455,26 @@ export default function Register() {
                   </View>
 
                   <TouchableOpacity
-                    style={styles.submitButton}
+                    style={[
+                      styles.submitButton,
+                      (loading ||
+                        !formData.phone ||
+                        !formData.firstname ||
+                        !formData.lastname ||
+                        !formData.clinicId) && {
+                        opacity: 0.5,
+                      },
+                    ]}
                     onPress={handleSendOtp}
-                    disabled={loading || !formData.phone || !formData.firstname}
+                    disabled={
+                      mutation.isPending ||
+                      !formData.phone ||
+                      !formData.firstname ||
+                      !formData.lastname ||
+                      !formData.clinicId
+                    }
                   >
-                    {loading ? (
+                    {mutation.isPending ? (
                       <ActivityIndicator color="#fff" />
                     ) : (
                       <Text style={styles.buttonText}>{t("register")}</Text>
@@ -585,7 +619,11 @@ export default function Register() {
                     ]}
                     onPress={handleVerifyOtp}
                   >
-                    <Text style={styles.buttonText}>{t("confirm")}</Text>
+                    {mutationVerifyOtp.isPending ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text style={styles.buttonText}>{t("confirm")}</Text>
+                    )}
                   </TouchableOpacity>
 
                   <TouchableOpacity

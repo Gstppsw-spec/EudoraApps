@@ -71,7 +71,7 @@ const IndexScreen: React.FC = () => {
                   {om.map((om: any) => (
                     <View key={om.id} style={styles.doctorCard}>
                       <Image
-                        source={{ uri: `${apiUrl}/uploads/${om.image}` }}
+                        source={{ uri: `${apiUrl}/uploads/doctor/${om.image}` }}
                         style={styles.doctorImage}
                       />
                       <View style={styles.doctorInfo}>
@@ -90,7 +90,7 @@ const IndexScreen: React.FC = () => {
                   {doctors.map((doctor: any) => (
                     <View key={doctor.id} style={styles.doctorCard}>
                       <Image
-                        source={{ uri: `${apiUrl}/uploads/${doctor.image}` }}
+                        source={{ uri: `${apiUrl}/uploads/doctor/${doctor.image}` }}
                         style={styles.doctorImage}
                       />
                       <View style={styles.doctorInfo}>
@@ -110,7 +110,7 @@ const IndexScreen: React.FC = () => {
                   {therapists.map((therapist: any) => (
                     <View key={therapist.id} style={styles.doctorCard}>
                       <Image
-                        source={{ uri: `${apiUrl}/uploads/${therapist.image}` }}
+                        source={{ uri: `${apiUrl}/uploads/doctor/${therapist.image}` }}
                         style={styles.doctorImage}
                       />
                       <View style={styles.doctorInfo}>
@@ -131,7 +131,7 @@ const IndexScreen: React.FC = () => {
                     <View key={consultant.id} style={styles.doctorCard}>
                       <Image
                         source={{
-                          uri: `${apiUrl}/uploads/${consultant.image}`,
+                          uri: `${apiUrl}/uploads/doctor/${consultant.image}`,
                         }}
                         style={styles.doctorImage}
                       />
@@ -153,7 +153,7 @@ const IndexScreen: React.FC = () => {
                     <View key={nurse.id} style={styles.doctorCard}>
                       <Image
                         source={{
-                          uri: `${apiUrl}/uploads/${nurse.image}`,
+                          uri: `${apiUrl}/uploads/doctor/${nurse.image}`,
                         }}
                         style={styles.doctorImage}
                       />
@@ -175,7 +175,7 @@ const IndexScreen: React.FC = () => {
                     <View key={cso.id} style={styles.doctorCard}>
                       <Image
                         source={{
-                          uri: `${apiUrl}/uploads/${cso.image}`,
+                          uri: `${apiUrl}/uploads/doctor/${cso.image}`,
                         }}
                         style={styles.doctorImage}
                       />

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Linking,
   Platform,
@@ -12,42 +13,44 @@ import HeaderWithBack from "../component/headerWithBack";
 
 const AboutScreen = () => {
   const handleContactPress = () => {
-    Linking.openURL("mailto:support@eudoraaesthetic.com");
+    Linking.openURL("mailto:admin@eudoraclinic.com");
   };
+
+   const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
-      <HeaderWithBack title="About" useGoBack />
+      <HeaderWithBack title={t("about")} useGoBack />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <Text style={styles.appName}>EUDORA AESTHETIC</Text>
           <Text style={styles.version}>Version 1.0.1</Text>
           <Text style={styles.description}>
-            EUDORA AESTHETIC is a modern skincare and aesthetic clinic app that helps you manage your beauty journey with ease and confidence.
+            {t("aboutView.description")}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>🌟 Key Features</Text>
-          <Bullet>Book appointments with aesthetic professionals</Bullet>
-          <Bullet>Access treatment and package history</Bullet>
-          <Bullet>Secure chat with certified doctors and consultants</Bullet>
-          <Bullet>Personalized skincare insights and notifications</Bullet>
+          <Text style={styles.sectionTitle}>{t("aboutView.keyFeatures")}</Text>
+          <Bullet>{t("aboutView.feature1")}</Bullet>
+          <Bullet>{t("aboutView.feature2")}</Bullet>
+          <Bullet>{t("aboutView.feature3")}</Bullet>
+          <Bullet>{t("aboutView.feature4")}</Bullet>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>🧑‍💻 Developer</Text>
+          <Text style={styles.sectionTitle}>{t("aboutView.developer")}</Text>
           <Text style={styles.paragraph}>Eudora International Group</Text>
 
-          <Text style={styles.sectionTitle}>📬 Contact</Text>
+          <Text style={styles.sectionTitle}>{t("aboutView.contact")}</Text>
           <Text style={styles.link} onPress={handleContactPress}>
-            support@eudoraaesthetic.com
+            admin@eudoraclinic.com
           </Text>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {Platform.OS === "ios" ? "Designed for iPhone & iPad" : "Optimized for Android Devices"}
+            {Platform.OS === "ios" ? t("aboutView.footerIOS") : t("aboutView.footerAndroid")}
           </Text>
         </View>
       </ScrollView>

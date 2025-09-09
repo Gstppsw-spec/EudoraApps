@@ -9,11 +9,12 @@ export default function Index() {
   const customerId = useStore((state) => state.customerid);
   const hasPin = useStore((state) => state.hasPin);
   const hasOnboarding = useStore((state) => state.hasOnboarding);
+  const customerDetails = useStore((state) => state.customerDetails);
 
   useEffect(() => {
     async function prepare() {
       await new Promise((r) => setTimeout(r, 500));
-      if (customerId && hasPin) {
+      if (customerId && hasPin && customerDetails?.token) {
         router.replace("/authentication/verifyPin");
       } else if (customerId && !hasPin) {
         router.replace("/tabs/home");

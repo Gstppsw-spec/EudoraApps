@@ -44,9 +44,6 @@ const YourTreatmentAndPackageScreen = () => {
   const [selectedTab, setSelectedTab] = useState("treatments");
   const customerId = useStore((state) => state.customerid);
 
-  
-console.log(apiUrl);
-
   const {
     data: treatmentsData,
     isLoading: isLoadingTreatments,

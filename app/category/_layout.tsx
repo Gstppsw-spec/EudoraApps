@@ -12,9 +12,15 @@ export default function RootLayout() {
         }}
       />
       <Stack.Screen
-        name="more-category"
+        name="[id]"
         options={{
-          headerShown: false
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="detail/[id]"
+        options={{
+          headerShown: false,
         }}
       />
     </Stack>

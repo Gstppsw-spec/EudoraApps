@@ -21,9 +21,8 @@ const languageDetector = {
         return callback(lang);
       }
     } catch (e) {
-      console.log('Failed to load language from storage', e);
     }
-    callback('en'); // fallback default
+    callback('en'); 
   },
   init: () => {},
   cacheUserLanguage: () => {},

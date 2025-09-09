@@ -28,8 +28,6 @@ const fetchNotificationCustomer = async ({ queryKey }: any) => {
 };
 
 const readNotification = async (formData: any) => {
-  console.log(formData);
-
   const response = await axios.post(
     `${apiUrl}/update_notification_read_status`,
     formData,
@@ -74,7 +72,6 @@ const NotificationsScreen = () => {
       queryClient.invalidateQueries(["get_user_notification", customerId]);
     },
     onError: (error) => {
-      console.log(error);
     },
   });
 
@@ -86,7 +83,6 @@ const NotificationsScreen = () => {
     },
     onError: (error) => {
       bottomSheetModalRef.current?.dismiss();
-      console.log(error);
     },
   });
 

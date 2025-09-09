@@ -10,7 +10,6 @@ export default function PushNotificationLocalRegister() {
       if (status !== 'granted') {
         const { status: newStatus } = await Notifications.requestPermissionsAsync();
         if (newStatus !== 'granted') {
-          console.log('Permission not granted');
           return;
         }
       }

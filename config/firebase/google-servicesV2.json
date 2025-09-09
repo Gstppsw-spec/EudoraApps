@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "125957769351",
+    "project_id": "eudoraaesthetic-70ef2",
+    "storage_bucket": "eudoraaesthetic-70ef2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:125957769351:android:b6c0bd8195906a83415022",
+        "android_client_info": {
+          "package_name": "com.anonymous.EudoraAesthetic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBx5o0dRoUe5Ul5YeCo5aA8Zf_UUtSEevk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

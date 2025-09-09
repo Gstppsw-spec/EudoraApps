@@ -7,6 +7,7 @@ export default function RootLayout() {
       <Stack.Screen name="registerUsers" />
       <Stack.Screen name="setPin" />
       <Stack.Screen name="verifyPin" />
+      <Stack.Screen name="forgetPin" />
     </Stack>
   );
 }

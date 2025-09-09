@@ -9,8 +9,6 @@ import {
   View,
 } from "react-native";
 
-import useAuthGuard from "../hooks/useAuthGuard";
-
 function MiddleTabButton({ onPress }: { onPress: () => void }) {
   return (
     <TouchableOpacity
@@ -26,8 +24,6 @@ function MiddleTabButton({ onPress }: { onPress: () => void }) {
 }
 
 export default function TabLayout() {
-  useAuthGuard();
-
   return (
     <Tabs
       screenOptions={({ route, navigation }) => ({
@@ -35,13 +31,12 @@ export default function TabLayout() {
         tabBarActiveTintColor: "#B0174C",
         tabBarInactiveTintColor: "#999",
         tabBarStyle: {
-          height: 70, // tinggi tab bar (default sekitar 50-60)
-          paddingBottom: 10, // jarak bawah ikon/label ke bawah
-          paddingTop: 10, // jarak atas (optional)
+          height: 70,
+          paddingBottom: 20,
+          // paddingTop: 10,
         },
         tabBarIcon: ({ color, focused }) => {
           if (route.name === "mytreatment") {
-            // Icon tidak dipakai di sini karena pakai custom button
             return null;
           }
           let iconName = "";

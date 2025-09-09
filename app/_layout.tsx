@@ -14,29 +14,32 @@ export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <GestureHandlerRootView  style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
-      <QueryClientProvider client={queryClient}>
-        <PushNotificationRegister />
-        <PushNotificationLocalRegister />
-        <NotificationListener />
+        <QueryClientProvider client={queryClient}>
+          <PushNotificationRegister />
+          <PushNotificationLocalRegister />
+          <NotificationListener />
 
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="authentication" />
-          <Stack.Screen name="component/onBoarding" />
-          <Stack.Screen name="tabs" />
-          <Stack.Screen name="treatment" />
-          <Stack.Screen name="bookappointment" />
-          <Stack.Screen name="mybooking" />
-          <Stack.Screen name="Point" />
-          <Stack.Screen name="notification" />
-          <Stack.Screen name="staff" />
-          <Stack.Screen name="static" />
-        </Stack>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="authentication" />
+            <Stack.Screen name="component/onBoarding" />
+            <Stack.Screen name="tabs" />
+            <Stack.Screen name="treatment" />
+            <Stack.Screen name="bookappointment" />
+            <Stack.Screen name="mybooking" />
+            <Stack.Screen name="Point" />
+            <Stack.Screen name="notification" />
+            <Stack.Screen name="staff" />
+            <Stack.Screen name="static" />
+            <Stack.Screen name="chat" />
+            <Stack.Screen name="transaction" />
+            <Stack.Screen name="saldo" />
+          </Stack>
 
-        <Toast config={toastConfig} />
-      </QueryClientProvider>
+          <Toast config={toastConfig} />
+        </QueryClientProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );

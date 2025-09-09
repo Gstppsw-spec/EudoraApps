@@ -24,6 +24,7 @@ const sendTokenNotification = async (formData: any) => {
 export default function PushNotificationRegister() {
   const customerId = useStore((state) => state.customerid);
   const hasPin = useStore((state) => state.hasPin);
+  const setToken = useStore((state) => state.setToken);
 
   const mutation = useMutation({
     mutationFn: sendTokenNotification
@@ -33,9 +34,11 @@ export default function PushNotificationRegister() {
     if (customerId && hasPin) {
       registerForPushNotificationsAsync().then((token) => {
         if (token) {
+          setToken(token)
           mutation.mutate({
             customerid: customerId,
             push_token: token,
+            type: 1 //insert
           });
         }
       });

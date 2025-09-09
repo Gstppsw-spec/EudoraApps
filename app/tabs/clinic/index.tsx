@@ -1,12 +1,10 @@
 import { FontAwesome } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
 import { Link } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
+  FlatList,
   RefreshControl,
   SafeAreaView,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -19,22 +17,20 @@ import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import useStore from "../../../store/useStore";
 
-import Constants from 'expo-constants';
-const apiUrl = Constants.expoConfig?.extra?.apiUrl 
-
+import ErrorView from "@/app/component/errorView";
+import LoadingView from "@/app/component/loadingView";
+import Constants from "expo-constants";
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const fetchListClinic = async () => {
-  const res = await fetch(
-    `${apiUrl}/getClinic`
-  );
+  const res = await fetch(`${apiUrl}/getClinic`);
   if (!res.ok) throw new Error("Network response was not ok");
   return res.json();
 };
 
 const IndexScreen: React.FC = () => {
-  const navigation = useNavigation();
   const setLocationId = useStore((state) => state.setLocationId);
-
+  const [refreshing, setRefreshing] = useState(false);
   const {
     data: dataclinic,
     error: errorclinic,
@@ -46,109 +42,99 @@ const IndexScreen: React.FC = () => {
     queryFn: fetchListClinic,
   });
 
-  const { distances, loading, error } = useClinicDistances(dataclinic?.clinicEuodora);
+  const { distances, loading, error } = useClinicDistances(
+    dataclinic?.clinicEuodora
+  );
 
-  const onRefresh = () => {
-    refetch();
+  const onRefresh = async () => {
+    setRefreshing(true);
+
+    try {
+      await Promise.all([refetch()]);
+    } catch (error) {
+      console.log("Error refreshing:", error);
+    }
+    setRefreshing(false);
   };
 
-  if (isLoadingclinic) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  const sortedClinics = dataclinic?.clinicEuodora
+    ?.slice()
+    .sort((a: any, b: any) => {
+      const distanceA = distances[a.id] ?? Infinity;
+      const distanceB = distances[b.id] ?? Infinity;
+      return distanceA - distanceB;
+    });
 
-  if (errorclinic) {
-    return (
-      <View style={styles.center}>
-        <Text>Error loading messages: {errorclinic.message}</Text>
-      </View>
-    );
-  }
+  const renderItem = ({ item, index }: { item: any; index: number }) => (
+    <View key={index} style={styles.clinicCardContainer}>
+      <Link
+        href={{ pathname: "/tabs/clinic/details", params: item }}
+        onPress={() => setLocationId(item.id)}
+        asChild
+      >
+        <TouchableOpacity style={styles.clinicCard}>
+          <View>
+            <Image
+              source={{ uri: `${apiUrl}/${item.image}` }}
+              style={styles.clinicImage}
+            />
+          </View>
+          <View>
+            <View style={styles.clinicInfo}>
+              <Text style={styles.clinicName}>{item.name}</Text>
+              <Text style={styles.clinicAddress}>{item.address}</Text>
+              <View style={styles.distanceRatingContainer}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <FontAwesome
+                    name="whatsapp"
+                    size={12}
+                    color="#4CAF50"
+                    style={styles.arrowIcon}
+                  />
+                  <Text style={styles.ratingText}>{item.mobilephone}</Text>
+                </View>
+                <Text style={styles.distanceText}>
+                  {loading
+                    ? "Menghitung..."
+                    : `${distances[item.id]?.toFixed(2) ?? "?"} KM`}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Link>
+      {index < sortedClinics.length - 1 && <View style={styles.divider} />}
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.mainHeader}>OUR CLINIC</Text>
+        <Text style={styles.mainHeader}>Eudora Clinic</Text>
       </View>
+
       <StatusBar
         translucent
         backgroundColor="transparent"
         barStyle="dark-content"
       />
 
-      <ScrollView
-        style={styles.scrollContainer}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
-        }
-      >
-        {isLoadingclinic ? (
-          <Text>Loading...</Text>
-        ) : errorclinic ? (
-          <Text>Terjadi kesalahan saat mengambil data</Text>
-        ) : (
-          dataclinic.clinicEuodora.map((clinic: any, index: number) => {
-            return (
-              <View key={index} style={styles.clinicCardContainer}>
-                <Link
-                  href={{ pathname: "/tabs/clinic/details", params: clinic }}
-                  onPress={() => setLocationId(clinic.id)}
-                  asChild
-                >
-                  <TouchableOpacity style={styles.clinicCard}>
-                    <View>
-                      <Image
-                        source={{
-                          uri: `${apiUrl}/upload/${clinic.image}`,
-                        }}
-                        style={styles.clinicImage}
-                      />
-                    </View>
-                    <View>
-                      <View style={styles.clinicInfo}>
-                        <Text style={styles.clinicName}>{clinic.name}</Text>
-                        <Text style={styles.clinicAddress}>
-                          {clinic.address}
-                        </Text>
-                        <View style={styles.distanceRatingContainer}>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                            }}
-                          >
-                            <FontAwesome
-                              name="whatsapp"
-                              size={12}
-                              color="#4CAF50"
-                              style={styles.arrowIcon}
-                            />
-                            <Text style={styles.ratingText}>
-                              {clinic.mobilephone}
-                            </Text>
-                          </View>
-                          <Text style={styles.distanceText}>
-                            {loading
-                              ? "Menghitung..."
-                              : `${distances[clinic.id]?.toFixed(2) ?? "?"} KM`}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </Link>
-                {index < dataclinic.clinicEuodora.length - 1 && (
-                  <View style={styles.divider} />
-                )}
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
+      {isLoadingclinic ? (
+        <LoadingView />
+      ) : errorclinic ? (
+        <ErrorView onRetry={onRefresh} />
+      ) : (
+        <FlatList
+          data={sortedClinics}
+          keyExtractor={(item: any) => item.id.toString()}
+          renderItem={renderItem}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          showsVerticalScrollIndicator={false}
+          style={styles.scrollContainer}
+        />
+      )}
     </SafeAreaView>
   );
 };

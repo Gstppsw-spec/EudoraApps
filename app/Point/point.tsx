@@ -91,8 +91,6 @@ export default function PointsDetail() {
     nonMedis: dataNonMedisPoint?.nonMedisPoint ?? [],
   };
 
-  console.log(pointsData);
-
   const renderPoints = () => {
     return pointsData[activeTab].map((item, index) => (
       <View key={index} style={styles.card}>

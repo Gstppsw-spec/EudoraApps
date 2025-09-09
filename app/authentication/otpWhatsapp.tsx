@@ -60,7 +60,6 @@ export default function Login() {
   const setLang = useStore((state) => state.setLang);
   const setCustomerDetails = useStore((state) => state.setCustomerDetails);
 
-  // Country code state
   const [countryCode, setCountryCode] = useState<Country>({
     callingCode: ["62"],
     cca2: "ID",
@@ -73,22 +72,16 @@ export default function Login() {
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const handlePhoneChange = (text: string) => {
-    // Remove all non-digit characters
     let cleanedText = text.replace(/[^0-9]/g, "");
-
-    // Remove leading zeros
     if (cleanedText.startsWith("0")) {
       cleanedText = cleanedText.substring(1);
     }
-
-    // Limit to 15 characters max
     cleanedText = cleanedText.substring(0, 15);
 
     setPhone(cleanedText);
   };
 
   const isValidPhoneNumber = (phone: string) => {
-    // Phone should be 8-15 digits and not start with 0
     const phoneRegex = /^[1-9]\d{7,14}$/;
     return phoneRegex.test(phone);
   };
@@ -96,7 +89,6 @@ export default function Login() {
   const mutation = useMutation({
     mutationFn: sendOtp,
     onSuccess: (data) => {
-      console.log(data.otp);
       if (data.status) {
         setMessageOtp(data?.otp);
         setShowSuccessModal(true);
@@ -127,9 +119,8 @@ export default function Login() {
       );
       return;
     }
-
     mutation.mutate({
-      phone: `0${phone}`,
+      phone: `${phone}`,
       countryCode: countryCode.callingCode[0],
     });
   };
@@ -138,7 +129,6 @@ export default function Login() {
     mutationFn: verifyOtpUser,
     onSuccess: (data) => {
       if (data.status) {
-        console.log(data);
         setCustomerId(data.customerId);
         setHasPin(data.has_pin);
         setCustomerDetails({
@@ -147,19 +137,14 @@ export default function Login() {
           email: data?.dataCustomer?.email,
           phone: data?.dataCustomer?.cellphonenumber,
           gender: data?.dataCustomer?.sex,
-          dateofbirth: data?.dataCustomer?.dateofbirth,
+          dateofbirth: data?.dataCustomer?.dateofbirth?.split(" ")[0] ?? "",
           locationCustomerRegister: data?.dataCustomer?.locationid,
+          token: data?.token,
         });
 
         if (data.has_pin) {
           router.replace("/tabs/home");
-          registerForPushNotificationsAsync().then((token) => {
-            if (token) {
-              console.log("✅ Expo Push Token:", token);
-            } else {
-              console.log("❌ Tidak mendapatkan token");
-            }
-          });
+          registerForPushNotificationsAsync().then((token) => {});
         } else {
           router.replace("/authentication/setPin");
         }
@@ -182,9 +167,9 @@ export default function Login() {
   };
 
   const confirmVerification = () => {
-    setShowConfirmModal(false);    
+    setShowConfirmModal(false);
     mutatioVerifyOtp.mutate({
-      phone: `0${phone}`,
+      phone: `${phone}`,
       otp: otp,
       countryCode: countryCode.callingCode[0],
     });
@@ -341,13 +326,29 @@ export default function Login() {
             </TouchableOpacity>
 
             {step === 2 && (
-              <TouchableOpacity
-                style={styles.resendButton}
-                onPress={handleSendOtp}
-              >
-                <Text style={styles.resendText}>{t("didNotReceiveCode")}</Text>
-                <Text style={styles.resendLink}>{t("resend")}</Text>
-              </TouchableOpacity>
+              <View>
+                <TouchableOpacity
+                  style={styles.resendButton}
+                  onPress={handleSendOtp}
+                >
+                  <Text style={styles.resendText}>
+                    {t("didNotReceiveCode")}
+                  </Text>
+                  <Text style={styles.resendLink}>{t("resend")}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.resendButton}
+                  onPress={() => {
+                    setStep(1);
+                    setPhone("");
+                    setOtp("");
+                  }}
+                >
+                  {/* <Text style={styles.resendText}>{t("didNotReceiveCode")}</Text> */}
+                  <Text style={styles.resendLink}>Change Phone Number</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -467,15 +468,12 @@ async function registerForPushNotificationsAsync() {
       }
 
       token = (await Notifications.getExpoPushTokenAsync()).data;
-      console.log("✅ Token:", token);
     } else {
       alert("Harus dijalankan di perangkat fisik!");
     }
 
     return token;
-  } catch (e) {
-    console.log("❌ Error saat register notifikasi:", e);
-  }
+  } catch (e) {}
 }
 
 const styles = StyleSheet.create({
@@ -576,7 +574,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     paddingHorizontal: 16,
     fontWeight: "500",
-    letterSpacing: 0
+    letterSpacing: 0,
   },
   phoneHint: {
     fontSize: 12,
@@ -594,7 +592,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: "#f9fafb",
     fontWeight: "600",
-    letterSpacing: 0
+    letterSpacing: 0,
   },
   otpNote: {
     fontSize: 13,

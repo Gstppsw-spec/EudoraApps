@@ -2,6 +2,7 @@ import HeaderWithBack from "@/app/component/headerWithBack";
 import { FontAwesome5 } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Button,
@@ -23,7 +24,9 @@ const PersonalDataScreen = () => {
   const profileImage = useStore((state) => state.profileImage);
   const setProfileImage = useStore((state) => state.setProfileImage);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const { t } = useTranslation();
 
+  
   const handlePickOption = () => {
     Alert.alert("Pilih Foto", "Ambil dari kamera atau galeri?", [
       { text: "Kamera", onPress: openCamera },
@@ -37,7 +40,7 @@ const PersonalDataScreen = () => {
     if (status !== "granted") return;
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       base64: true, // ✅ ini penting!
       quality: 0.7,
     });
@@ -61,7 +64,7 @@ const PersonalDataScreen = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       base64: true,
       quality: 0.7,
     });
@@ -98,12 +101,12 @@ const PersonalDataScreen = () => {
               <FontAwesome5 name="user" size={60} color="#aaa" />
             </View>
           )}
-          <Text style={styles.changeText}>Ubah Foto Profil</Text>
+          <Text style={styles.changeText}>{t("changeProfilePhotos")}</Text>
         </TouchableOpacity>
 
         {/* Full Name Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Full Name</Text>
+          <Text style={styles.sectionTitle}>{t("fullname")}</Text>
           <View style={styles.inputContainer}>
             <TextInput style={styles.input} value={customerDetails?.fullname} />
           </View>
@@ -126,7 +129,7 @@ const PersonalDataScreen = () => {
 
         {/* Phone Number Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Phone Number</Text>
+          <Text style={styles.sectionTitle}>{t("cellphoneNumber")}</Text>
           <View style={styles.inputContainer}>
             <TextInput style={styles.input} value={customerDetails?.phone} />
           </View>
@@ -134,7 +137,7 @@ const PersonalDataScreen = () => {
 
         {/* Date of Birth Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Date of Birth</Text>
+          <Text style={styles.sectionTitle}>{t("dateOfBirth")}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
@@ -146,7 +149,7 @@ const PersonalDataScreen = () => {
 
         {/* Gender Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gender</Text>
+          <Text style={styles.sectionTitle}>{t("gender")}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
@@ -155,15 +158,15 @@ const PersonalDataScreen = () => {
             />
           </View>
         </View>
-        <TouchableOpacity style={styles.saveButton}>
+        {/* <TouchableOpacity style={styles.saveButton}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </ScrollView>
 
       <Modal visible={previewVisible} transparent={true} animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.previewText}>Pratinjau Gambar</Text>
+            <Text style={styles.previewText}>{t("previewImage")}</Text>
             {tempImage && (
               <Image source={{ uri: tempImage }} style={styles.previewImage} />
             )}

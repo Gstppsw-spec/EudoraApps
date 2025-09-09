@@ -79,11 +79,6 @@ export default function VerifyPin() {
       return;
     }
 
-    console.log({
-      customerId: customerId,
-      pin: pin,
-    });
-    
     mutation.mutate({
       customerId: customerId,
       pin: pin,
@@ -105,7 +100,6 @@ export default function VerifyPin() {
             value={pin}
             onChangeText={setPin}
             placeholderTextColor={"black"}
-            
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
           />
@@ -128,6 +122,13 @@ export default function VerifyPin() {
                 <Text style={styles.buttonText}>Verify</Text>
               </View>
             )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.resendButton}
+            onPress={() => router.push('/authentication/forgetPin')}
+          >
+            <Text style={styles.resendText}>Forgot PIN ? </Text>
+            <Text style={styles.resendLink}>Request Change</Text>
           </TouchableOpacity>
         </View>
       </TouchableWithoutFeedback>
@@ -186,5 +187,20 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  resendButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 24,
+    padding: 8,
+  },
+  resendText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  resendLink: {
+    fontSize: 14,
+    color: "#B0174C",
+    fontWeight: "600",
   },
 });

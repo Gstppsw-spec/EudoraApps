@@ -10,6 +10,11 @@ export default function RootLayout() {
       }}
     >
       <Stack.Screen name="privacy-policy" />
+      <Stack.Screen name="about" />
+      <Stack.Screen name="help-center" />
+      <Stack.Screen name="term-conditions" />
+      <Stack.Screen name="claimTreatment" />
+      <Stack.Screen name="myRefferal" />
     </Stack>
   );
 }

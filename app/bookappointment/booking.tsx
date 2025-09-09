@@ -1,5 +1,5 @@
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
@@ -26,7 +26,7 @@ const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const postData = async (formData: any) => {
   const response = await axios.post(
-    `${apiUrl}/insertBookingByCustomer`,
+    `${apiUrl}/insertBookingByCustomerDev`,
     formData,
     {
       headers: {
@@ -38,17 +38,28 @@ const postData = async (formData: any) => {
 };
 
 const fetchAvailableTime = async ({ queryKey }: any) => {
-  const [, date, locationId] = queryKey;
-  const res = await fetch(`${apiUrl}/getTimeAvailable/${date}/${locationId}`);
+  const [, date, locationId, duration] = queryKey;
+  const res = await fetch(
+    `${apiUrl}/getTimeAvailableDuration/${date}/${locationId}/${duration}`
+  );
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
 
-const fetchListService = async () => {
-  const res = await fetch(`${apiUrl}/getServiceList`);
+const fetchListService = async ({ queryKey }: any) => {
+  const [, customerId] = queryKey;
+  const res = await fetch(`${apiUrl}/getServiceListCustomer/${customerId}`);
   if (!res.ok) throw new Error("Network response was not ok");
   return res.json();
 };
+type Treatment = {
+  id: number;
+  name: string;
+  duration: number;
+  qty: number;
+};
+
+type SelectedTreatment = Treatment & { qtyorder: number };
 
 const BookingAppointmentScreen = () => {
   const today = new Date().toISOString().split("T")[0];
@@ -63,6 +74,52 @@ const BookingAppointmentScreen = () => {
   const [showTreatmentModal, setShowTreatmentModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [duration, setDuration] = useState(0);
+  const [selected, setSelected] = useState<SelectedTreatment[]>([]);
+  const queryClient = useQueryClient();
+
+  const toggleSelect = (treatment: Treatment) => {
+    setSelected((prev) => {
+      const exists = prev.find((s) => s.id === treatment.id);
+
+      if (exists) {
+        return prev.map((s) =>
+          s.id === treatment.id
+            ? { ...s, qtyorder: Math.min(s.qtyorder + 1, treatment.qty) }
+            : s
+        );
+      } else {
+        return [...prev, { ...treatment, qtyorder: 1 }];
+      }
+    });
+  };
+
+  const updateQty = (id: number, change: number) => {
+    setSelected((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          const newQty = Math.max(1, Math.min(s.qty, s.qtyorder + change));
+          return { ...s, qtyorder: newQty };
+        }
+        return s;
+      })
+    );
+  };
+
+  const calculateDuration = (items: (Treatment & { qtyorder: number })[]) => {
+    return items.reduce(
+      (total, item) => total + item.duration * item.qtyorder,
+      0
+    );
+  };
+
+  useEffect(() => {
+    setDuration(calculateDuration(selected));
+  }, [selected]);
+
+  const removeTreatment = (id: number) => {
+    setSelected((prev) => prev.filter((s) => s.id !== id));
+  };
 
   const {
     data: serviceOptions,
@@ -71,15 +128,15 @@ const BookingAppointmentScreen = () => {
     isRefetching,
     refetch,
   } = useQuery({
-    queryKey: ["getServiceList"],
+    queryKey: ["getServiceListCustomer", customerId],
     queryFn: fetchListService,
+    enabled: !!customerId,
   });
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-    }, 300); // delay 300ms
-
+    }, 300);
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
@@ -92,21 +149,33 @@ const BookingAppointmentScreen = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["getTimeAvailable", selectedDate, locationId],
+    queryKey: ["getTimeAvailableDuration", selectedDate, locationId, duration],
     queryFn: fetchAvailableTime,
-    enabled: !!selectedDate && !!locationId,
+    enabled: !!selectedDate && !!locationId && !!duration,
   });
+
 
   const mutation = useMutation({
     mutationFn: postData,
     onSuccess: (data) => {
-      Toast.show({
-        type: "success",
-        text2: "Appointment berhasil dibuat!",
-        position: "top",
-        visibilityTime: 2000,
-      });
-      router.push("/mybooking/myBooking");
+      if (data?.status) {
+        Toast.show({
+          type: "success",
+          text2: "Appointment berhasil dibuat!",
+          position: "top",
+          visibilityTime: 2000,
+        });
+        setSelected([]);
+        setDuration(0);
+        router.push("/mybooking/myBooking");
+      } else {
+        Toast.show({
+          type: "error",
+          text2: "Appointment gagal dibuat!",
+          position: "top",
+          visibilityTime: 2000,
+        });
+      }
     },
     onError: (error) => {
       Toast.show({
@@ -119,18 +188,44 @@ const BookingAppointmentScreen = () => {
   });
 
   const handleBooking = () => {
-    if (selectedDate && selectedTime && selectedEmployee && remarks) {
-      mutation.mutate({
-        appointmentdate: selectedDate,
-        booktime: selectedTime,
-        service: remarks,
-        locationId: locationId,
-        customerid: customerId,
-        employeeid: selectedEmployee,
+    if (!selectedDate) {
+      Toast.show({
+        type: "error",
+        text1: "Tanggal belum dipilih",
+        position: "top",
       });
-    } else {
-      alert("Please select a date, a time and treatment .");
+      return;
     }
+    if (!selected || selected.length === 0) {
+      Toast.show({
+        type: "error",
+        text1: "Pilih minimal satu treatment",
+        position: "top",
+      });
+      return;
+    }
+    if (!selectedEmployee) {
+      Toast.show({
+        type: "error",
+        text1: "Pilih waktu treatment",
+        position: "top",
+      });
+      return;
+    }
+
+    const service = selected
+      .map((item) => `${item.name} (x${item.qtyorder})`)
+      .join(", ");
+
+    mutation.mutate({
+      appointmentdate: selectedDate,
+      booktime: selectedTime,
+      service: service,
+      locationId: locationId,
+      customerid: customerId,
+      employeeid: selectedEmployee,
+      duration: duration,
+    });
   };
 
   return (
@@ -176,14 +271,50 @@ const BookingAppointmentScreen = () => {
           }}
         />
 
-        {/* <Text style={styles.subHeader}>Select Time</Text> */}
+        <View style={styles.sectionContainer}>
+          <Pressable
+            style={styles.input}
+            onPress={() => setShowTreatmentModal(true)}
+          >
+            <Text style={styles.inputText}>Select Treatment</Text>
+            <Ionicons name="chevron-down" size={20} color="#666" />
+          </Pressable>
+
+          {selected.length > 0 && (
+            <View style={styles.selectedList}>
+              {selected.map((item) => (
+                <View key={item.id} style={styles.selectedItem}>
+                  <Text style={styles.selectedText}>
+                    {item.name} (x{item.qtyorder})
+                  </Text>
+                  <View style={styles.qtyButtons}>
+                    <TouchableOpacity onPress={() => updateQty(item.id, -1)}>
+                      <Ionicons name="remove-circle" size={22} color="red" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => updateQty(item.id, 1)}>
+                      <Ionicons name="add-circle" size={22} color="green" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => removeTreatment(item.id)}>
+                      <Ionicons name="trash" size={22} color="gray" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
         <View style={styles.timeContainer}>
-          {isLoading ? (
+          {duration === null ? (
+            <Text style={[styles.timeText, styles.chooseTreatmentText]}>
+              Silahkan pilih treatment untuk melihat ketersediaan waktu
+            </Text>
+          ) : isLoading ? (
             <View style={styles.center}>
               <ActivityIndicator size="large" />
             </View>
           ) : error ? (
-            <Text style={styles.timeText}>
+            <Text style={[styles.timeText, styles.chooseTreatmentText]}>
               Terjadi kesalahan saat mengambil data
             </Text>
           ) : availableTime?.availableTimeEmployee?.length > 0 ? (
@@ -212,21 +343,10 @@ const BookingAppointmentScreen = () => {
               )
             )
           ) : (
-            <Text style={styles.timeText}>Tidak ada waktu tersedia</Text>
-          )}
-        </View>
-
-        <View style={styles.sectionContainer}>
-          {/* <Text style={styles.sectionTitle}>SELECT TREATMENT</Text> */}
-          <Pressable
-            style={styles.input}
-            onPress={() => setShowTreatmentModal(true)}
-          >
-            <Text style={styles.inputText}>
-              {remarks || "Select Treatment"}
+            <Text style={[styles.timeText, styles.chooseTreatmentText]}>
+              Tidak ada waktu tersedia
             </Text>
-            <Ionicons name="chevron-down" size={20} color="#666" />
-          </Pressable>
+          )}
         </View>
 
         <Modal
@@ -261,10 +381,12 @@ const BookingAppointmentScreen = () => {
                     style={styles.modalItem}
                     onPress={() => {
                       setShowTreatmentModal(false);
-                      setRemarks(item?.name);
+                      toggleSelect(item);
                     }}
                   >
-                    <Text>{item?.name}</Text>
+                    <Text>
+                      {item?.name} - {item?.duration} Menit ({item?.qty})
+                    </Text>
                   </TouchableOpacity>
                 )}
                 initialNumToRender={5}
@@ -303,6 +425,13 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
   },
+  chooseTreatmentText: {
+    fontStyle: "italic",
+    color: "#888", // abu-abu biar beda dari text normal
+    textAlign: "center",
+    marginVertical: 10,
+  },
+
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -416,6 +545,7 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     marginBottom: 24,
+    marginTop: 24,
   },
   sectionTitle: {
     fontSize: 16,
@@ -544,6 +674,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
+  selectedList: { marginTop: 12 },
+  selectedItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  selectedText: { fontSize: 14, color: "#444", flex: 1, marginRight: 10 },
+  qtyButtons: { flexDirection: "row", gap: 10 },
 });
 
 export default BookingAppointmentScreen;

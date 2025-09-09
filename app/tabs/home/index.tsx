@@ -1,24 +1,25 @@
+import HeaderActions from "@/app/component/headerWithSearchCartNotification";
+import PopUpModal from "@/app/component/popUpModal";
+import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 import {
-  Feather,
-  FontAwesome,
-  Ionicons,
-  MaterialCommunityIcons,
-} from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { BlurView } from "expo-blur";
 import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
 import { Link, router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Dimensions,
   Image,
-  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -29,7 +30,6 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -52,6 +52,32 @@ const fetchAvailableTime = async ({ queryKey }: any) => {
   return res.json();
 };
 
+const getEvent = async () => {
+  const res = await fetch(`${apiUrl}/getListEvent`);
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+};
+
+const getAds = async () => {
+  const res = await fetch(`${apiUrl}/getListAds`);
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+};
+
+const getCategory = async ({ queryKey }: any) => {
+  const [, customerId, token] = queryKey;
+  const res = await fetch(`${apiUrl}/getListCategoryApps`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      auth_token_customer: `${token}`,
+      customerid: `${customerId}`,
+    },
+  });
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+};
+
 const fetchDetailCustomer = async ({ queryKey }: any) => {
   const [, customerId] = queryKey;
   const res = await fetch(`${apiUrl}/getDetailCustomer/${customerId}`);
@@ -68,15 +94,6 @@ const canceledBooking = async (formData: any) => {
   return response.data;
 };
 
-const fetchNotificationCustomerNotRead = async ({ queryKey }: any) => {
-  const [, customerId] = queryKey;
-  const res = await fetch(
-    `${apiUrl}/get_user_notification_not_read/${customerId}`
-  );
-  if (!res.ok) throw new Error("Network error");
-  return res.json();
-};
-
 export default function HomeScreen() {
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const [isEnabled, setIsEnabled] = useState(false);
@@ -84,8 +101,10 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ["35%", "50%"], []);
+  const { t } = useTranslation();
+  const customerDetails = useStore((state) => state.customerDetails);
 
-  const handlePresentModalPress = useCallback((bookingId) => {
+  const handlePresentModalPress = useCallback((bookingId: any) => {
     setCurrentBooking(bookingId);
     bottomSheetModalRef.current?.present();
   }, []);
@@ -95,30 +114,46 @@ export default function HomeScreen() {
     bottomSheetModalRef.current?.dismiss();
   };
 
-  const imageData = [
-    `${apiUrl}/uploads/iklan/carousel4.jpg`,
-    `${apiUrl}/uploads/iklan/carousel.jpg`,
-  ];
-
-  const imageDataEvent = [
-    `${apiUrl}/uploads/iklan/promo779k.png`,
-    `${apiUrl}/uploads/iklan/1rupiah.png`,
-  ];
-
+  const [refreshing, setRefreshing] = useState(false);
   const progressValue = useSharedValue(0);
   const { addReminder, removeReminder } = useStore();
-  const [modalVisible, setModalVisible] = useState(false);
+
   const [currentBooking, setCurrentBooking] = useState(null);
+
+  const {
+    data: event,
+    isLoading: isLoadingEvent,
+    refetch: refetchEvent,
+    isRefetching: isRefetchingEvent,
+  } = useQuery({
+    queryKey: ["getListEvent"],
+    queryFn: getEvent,
+  });
+
+  const {
+    data: ads,
+    isLoading: isLoadingads,
+    refetch: refetchads,
+    isRefetching: isRefetchingads,
+  } = useQuery({
+    queryKey: ["getListAds"],
+    queryFn: getAds,
+  });
+
+  const {
+    data: category,
+    isLoading: isLoadingcategory,
+    refetch: refetchcategory,
+    isRefetching: isRefetchingcategory,
+  } = useQuery({
+    queryKey: ["getListCategoryApps", customerId, customerDetails?.token],
+    queryFn: getCategory,
+    enabled: !!customerId || customerDetails?.token,
+  });
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["getListBooking", customerId],
     queryFn: fetchAvailableTime,
-    enabled: !!customerId,
-  });
-
-  const { data: notificaton, refetch: refetchNotification } = useQuery({
-    queryKey: ["get_user_notification_not_read", customerId],
-    queryFn: fetchNotificationCustomerNotRead,
     enabled: !!customerId,
   });
 
@@ -222,37 +257,44 @@ export default function HomeScreen() {
     }
   };
 
-  const cancelModal = () => {
-    setModalVisible(false);
-    setCurrentBooking(null);
-  };
-
   const confirmCanceledBooking = () => {
     mutation.mutate({
       bookingId: currentBooking,
     });
   };
 
-  const onRefresh = () => {
-    refetch();
-    refectCustomerDetail();
-    refetchNotification();
+  const onRefresh = async () => {
+    setRefreshing(true);
+
+    try {
+      await Promise.all([
+        refetch(),
+        refetchEvent(),
+        refetchads(),
+        refectCustomerDetail(),
+        refetchcategory(),
+      ]);
+    } catch (error) {
+      console.log("Error refreshing:", error);
+    }
+    setRefreshing(false);
   };
 
   return (
     <SafeAreaView style={styles.containerArea}>
+      <PopUpModal status={customerDetail?.detailcustomer[0]?.ISNEWCUSTOMER} />
       <ScrollView
         style={{ paddingTop: StatusBar.currentHeight }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         <View style={styles.container}>
           <Carousel
             width={width}
             height={320}
-            data={imageData}
+            data={ads?.data}
             scrollAnimationDuration={1000}
             autoPlay
             autoPlayInterval={3000}
@@ -260,32 +302,63 @@ export default function HomeScreen() {
             onProgressChange={(_, absoluteProgress) =>
               (progressValue.value = absoluteProgress)
             }
-            renderItem={({ item }) => (
-              <View
-                style={{
-                  flex: 1,
-                  backgroundColor: "#ccc",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <Image
-                  source={{ uri: item }}
-                  style={{ width: "100%", height: "100%" }}
-                  resizeMode="repeat"
-                />
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const startX = useRef(0);
+              const startY = useRef(0);
+              let moved = false;
+              return (
+                <Pressable
+                  onPress={() => {
+                    if (!moved) {
+                      WebBrowser.openBrowserAsync(
+                        item?.link_url ??
+                          "https://eudoraclinic.com/2024/01/29/rekomendasi-basic-skincare-untuk-pemula",
+                        {
+                          enableBarCollapsing: true,
+                          showTitle: true,
+                        }
+                      );
+                    }
+                  }}
+                  onPressIn={(e) => {
+                    startX.current = e.nativeEvent.pageX;
+                    startY.current = e.nativeEvent.pageY;
+                    moved = false;
+                  }}
+                  onPressOut={(e) => {
+                    const dx = Math.abs(e.nativeEvent.pageX - startX.current);
+                    const dy = Math.abs(e.nativeEvent.pageY - startY.current);
+                    if (dx > 10 || dy > 10) {
+                      moved = true;
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#ccc",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Image
+                    source={{
+                      uri: `${apiUrl}/${item?.image}`,
+                    }}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="cover"
+                  />
+                </Pressable>
+              );
+            }}
           />
           <View style={styles.indicatorContainer}>
-            {imageData.map((_, i) => (
+            {ads?.data?.map((_, i) => (
               <IndicatorDot key={i} index={i} progressValue={progressValue} />
             ))}
           </View>
 
           <LinearGradient
-            colors={["#FFFFFF", "#FFFFFF", "#B0174C"]} // putih dominan, oranye sedikit
-            locations={[0, 0.85, 1]} // oranye hanya di 5% bagian bawah
+            colors={["#FFFFFF", "#FFFFFF", "#B0174C"]}
+            locations={[0, 0.9, 1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={styles.pointsCard}
@@ -293,7 +366,7 @@ export default function HomeScreen() {
             <Link href="/Point/point" style={styles.pointItem}>
               <View style={styles.pointContent}>
                 <FontAwesome
-                  name="gift" // bisa diganti "gift", "diamond", "trophy", dll
+                  name="gift"
                   size={18}
                   color="#B0174C"
                   style={{ marginLeft: 6 }}
@@ -317,9 +390,7 @@ export default function HomeScreen() {
                 marginHorizontal: 10,
               }}
             >
-              <Text style={styles.referralLabel}>
-                Dapatkan point dengan undang teman kamu
-              </Text>
+              <Text style={styles.referralLabel}>{t("home.refferal")}</Text>
               <View
                 style={{
                   flexDirection: "row",
@@ -338,14 +409,14 @@ export default function HomeScreen() {
                     if (Platform.OS === "android") {
                       Toast.show({
                         type: "success",
-                        text2: "Refferal code berhasil dicopy!",
+                        text2: t("home.copySuccess"),
                         position: "top",
                         visibilityTime: 2000,
                       });
                     } else {
                       Toast.show({
                         type: "success",
-                        text2: "Refferal code berhasil dicopy!",
+                        text2: t("home.copySuccess"),
                         position: "top",
                         visibilityTime: 2000,
                       });
@@ -360,13 +431,13 @@ export default function HomeScreen() {
                       const code =
                         customerDetail?.detailcustomer[0]?.REFERRALCODE ||
                         "UNKNOWN";
-                      const message = `Gunakan kode referral saya: ${code} untuk daftar di Eudora Clinic! ✨`;
+                      const message = t("home.referralMessage", { code });
 
                       await Share.share({ message });
                     } catch (error) {
                       Toast.show({
                         type: "error",
-                        text2: "Gagal share refferal code!",
+                        text2: t("home.failedShare"),
                         position: "top",
                         visibilityTime: 2000,
                       });
@@ -379,68 +450,7 @@ export default function HomeScreen() {
             </View>
           </LinearGradient>
         </View>
-
-        <View
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "space-between",
-            width: "100%",
-            position: "absolute",
-            top: 10,
-            alignItems: "center",
-          }}
-        >
-          <BlurView intensity={30} tint="dark" style={styles.searchContainer}>
-            <FontAwesome
-              name="search"
-              size={15}
-              color="#fff"
-              style={styles.icon}
-            />
-            <TextInput
-              placeholder="Search"
-              placeholderTextColor="white"
-              style={styles.input}
-            />
-            <TouchableOpacity>
-              <FontAwesome name="filter" size={15} color="#fff" />
-            </TouchableOpacity>
-          </BlurView>
-          <Pressable
-            style={{
-              borderColor: "#272835",
-              borderWidth: 0.1,
-              borderRadius: 100,
-              padding: 15,
-              backgroundColor: "#1A1B25",
-              marginRight: 10,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            onPress={() => router.push('/notification')}
-          >
-            <View >
-              <View>
-                <FontAwesome name="bell" size={15} color="white" />
-                {notificaton?.count > 0 && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: -4,
-                      right: -4,
-                      backgroundColor: "red",
-                      borderRadius: 8,
-                      width: 10,
-                      height: 10,
-                    }}
-                  />
-                )}
-              </View>
-            </View>
-          </Pressable>
-        </View>
-
+        <HeaderActions />
         <View
           style={{
             display: "flex",
@@ -463,48 +473,52 @@ export default function HomeScreen() {
             >
               {" "}
               Hi {customerDetail?.detailcustomer?.[0]?.FIRSTNAME}{" "}
-              {customerDetail?.detailcustomer?.[0]?.LASTNAME}, siap menjadi
-              cantik?
+              {customerDetail?.detailcustomer?.[0]?.LASTNAME}, {t("home.hello")}
             </Text>
           </View>
         </View>
+        {category?.listCategory?.length > 0 && (
+          <View style={styles.containerCategory}>
+            {category?.listCategory.slice(0, 3).map((category, index) => {
+              return (
+                <View style={styles.iconCategory} key={index}>
+                  <TouchableOpacity
+                    style={styles.buttonIconCategory}
+                    onPress={() => router.push(`/category/${category.id}`)}
+                  >
+                    <FontAwesome
+                      name={category.icon}
+                      size={24}
+                      color="#B0174C"
+                    />
+                  </TouchableOpacity>
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      marginTop: 2,
+                    }}
+                  >
+                    {category.name}
+                  </Text>
+                </View>
+              );
+            })}
 
-        <View style={styles.containerCategory}>
-          <View style={styles.iconCategory}>
-            <TouchableOpacity style={styles.buttonIconCategory}>
-              <MaterialCommunityIcons
-                name="face-woman-shimmer"
-                size={24}
-                color="#B0174C"
-              />
-            </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Face</Text>
+            <View style={styles.iconCategory}>
+              <TouchableOpacity
+                style={styles.buttonIconCategory}
+                onPress={() => router.push("/category")}
+              >
+                <FontAwesome name="ellipsis-h" size={20} color="#B0174C" />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 11, fontWeight: "bold", marginTop: 1 }}>
+                More
+              </Text>
+            </View>
           </View>
-
-          <View style={styles.iconCategory}>
-            <TouchableOpacity style={styles.buttonIconCategory}>
-              <FontAwesome name="female" size={20} color="#B0174C" />
-            </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Body</Text>
-          </View>
-
-          <View style={styles.iconCategory}>
-            <TouchableOpacity style={styles.buttonIconCategory}>
-              <FontAwesome name="shopping-bag" size={20} color="#B0174C" />
-            </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "bold" }}>Product</Text>
-          </View>
-
-          <View style={styles.iconCategory}>
-            <TouchableOpacity
-              style={styles.buttonIconCategory}
-              onPress={() => router.push("/category/more-category")}
-            >
-              <FontAwesome name="ellipsis-h" size={20} color="#B0174C" />
-            </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "bold" }}>More</Text>
-          </View>
-        </View>
+        )}
 
         <View style={{ paddingHorizontal: 20 }}>
           <View
@@ -517,14 +531,14 @@ export default function HomeScreen() {
             }}
           >
             <Text style={{ fontWeight: "bold", fontSize: 16 }}>
-              Upcoming Appointments
+              {t("home.upcomingAppointment")}
             </Text>
             <Link href={"/mybooking/myBooking"} asChild>
               <TouchableOpacity>
                 <Text
                   style={{ fontSize: 14, fontWeight: "bold", color: "#B0174C" }}
                 >
-                  See All
+                  {t("home.seeAll")}
                 </Text>
               </TouchableOpacity>
             </Link>
@@ -580,7 +594,9 @@ export default function HomeScreen() {
                           {formattedDate} ({booking.TIME})
                         </Text>
                         <View style={styles.remindButton}>
-                          <Text style={styles.remindText}>Remind me</Text>
+                          <Text style={styles.remindText}>
+                            {t("home.remindMe")}
+                          </Text>
                           <Switch
                             style={styles.switch}
                             trackColor={{ false: "#ccc", true: "#FFB900" }}
@@ -595,7 +611,7 @@ export default function HomeScreen() {
                       <View style={styles.row}>
                         <Image
                           source={{
-                            uri: `${apiUrl}/upload/${booking.IMAGE}`,
+                            uri: `${apiUrl}/${booking.IMAGE}`,
                           }}
                           style={styles.clinicImage}
                         />
@@ -606,7 +622,9 @@ export default function HomeScreen() {
                           <Text style={styles.clinicAddress}>
                             {booking.ADDRESS}
                           </Text>
-                          <Text style={styles.servicesTitle}>Services:</Text>
+                          <Text style={styles.servicesTitle}>
+                            {t("home.services")}:
+                          </Text>
                           <Text style={styles.servicesText}>
                             {booking.SERVICE}
                           </Text>
@@ -619,7 +637,9 @@ export default function HomeScreen() {
                             handlePresentModalPress(booking.BOOKINGID)
                           }
                         >
-                          <Text style={styles.cancelText}>Cancel Booking</Text>
+                          <Text style={styles.cancelText}>
+                            {t("home.cancelBooking")}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -629,9 +649,9 @@ export default function HomeScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="medkit-outline" size={40} color="#E0E0E0" />
-              <Text style={styles.emptyTitle}>No History found</Text>
+              <Text style={styles.emptyTitle}>{t("home.noHistoryFound")}</Text>
               <Text style={styles.emptySubtitle}>
-                You don't have any upcoming appointment yet
+                {t("home.noUpcomingAppointments")}
               </Text>
             </View>
           )}
@@ -649,7 +669,7 @@ export default function HomeScreen() {
               }}
             >
               <Text style={{ fontWeight: "bold", fontSize: 14 }}>
-                Our Beauty Event,
+                {t("home.ourBeautyEvent")}
               </Text>
 
               <TouchableOpacity>
@@ -662,8 +682,8 @@ export default function HomeScreen() {
 
           <Carousel
             width={width}
-            height={200}
-            data={imageDataEvent}
+            height={250}
+            data={event?.data}
             scrollAnimationDuration={1000}
             autoPlay
             autoPlayInterval={3000}
@@ -671,27 +691,58 @@ export default function HomeScreen() {
             onProgressChange={(_, absoluteProgress) =>
               (progressValue.value = absoluteProgress)
             }
-            renderItem={({ item }) => (
-              <View
-                style={{
-                  flex: 1,
-                  backgroundColor: "#ccc",
-                  borderRadius: 10,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  margin: 10,
-                }}
-              >
-                <Image
-                  source={{ uri: item }}
-                  style={{ width: "100%", height: "100%", borderRadius: 10 }}
-                  resizeMode="cover"
-                />
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const startX = useRef(0);
+              const startY = useRef(0);
+              let moved = false;
+
+              return (
+                <Pressable
+                  onPress={() => {
+                    if (!moved) {
+                      WebBrowser.openBrowserAsync(
+                        item?.link_url ??
+                          "https://eudoraclinic.com/2024/01/29/rekomendasi-basic-skincare-untuk-pemula",
+                        {
+                          enableBarCollapsing: true,
+                          showTitle: true,
+                        }
+                      );
+                    }
+                  }}
+                  onPressIn={(e) => {
+                    startX.current = e.nativeEvent.pageX;
+                    startY.current = e.nativeEvent.pageY;
+                    moved = false;
+                  }}
+                  onPressOut={(e) => {
+                    const dx = Math.abs(e.nativeEvent.pageX - startX.current);
+                    const dy = Math.abs(e.nativeEvent.pageY - startY.current);
+                    if (dx > 10 || dy > 10) {
+                      moved = true;
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#ccc",
+                    borderRadius: 10,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    margin: 10,
+                    overflow: "hidden",
+                  }}
+                >
+                  <Image
+                    source={{ uri: `${apiUrl}/${item.image}` }}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="cover"
+                  />
+                </Pressable>
+              );
+            }}
           />
           <View style={styles.indicatorContainer}>
-            {imageData.map((_, i) => (
+            {event?.data?.map((_, i) => (
               <IndicatorDot key={i} index={i} progressValue={progressValue} />
             ))}
           </View>
@@ -700,61 +751,39 @@ export default function HomeScreen() {
         <View style={{ marginBottom: 80 }} />
       </ScrollView>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={cancelModal} // Close on back button
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cancel Booking</Text>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to cancel this booking?
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={cancelModal}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => confirmCanceledBooking()}
-                style={styles.modalButton}
-              >
-                <Text style={styles.modalButtonText}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       <View style={styles.container}>
         <BottomSheetModal
           ref={bottomSheetModalRef}
           snapPoints={snapPoints}
           enablePanDownToClose
           backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
+          backdropComponent={(props) => (
+            <BottomSheetBackdrop
+              {...props}
+              disappearsOnIndex={-1}
+              appearsOnIndex={0}
+              pressBehavior="close"
+            />
+          )}
         >
           <BottomSheetView style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cancel Booking</Text>
+            <Text style={styles.modalTitle}> {t("home.cancelBooking")}</Text>
             <Text style={styles.modalMessage}>
-              Are you sure you want to cancel this booking?
+              {t("home.confirmCancelBooking")}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: "#ccc" }]}
                 onPress={handleCancel}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
+                <Text style={styles.modalButtonText}>{t("home.cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: "#f87171" }]}
                 onPress={confirmCanceledBooking}
               >
                 <Text style={[styles.modalButtonText, { color: "white" }]}>
-                  Confirm
+                  {t("home.confirm")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -851,6 +880,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "#fff",
     fontSize: 14,
+    letterSpacing: 2,
   },
   icon: {
     marginRight: 10,
@@ -867,17 +897,22 @@ const styles = StyleSheet.create({
   },
   iconCategory: {
     alignItems: "center",
+    justifyContent: "center",
+    margin: 8,
+    width: 80, // biar kotaknya konsisten
   },
   buttonIconCategory: {
+    backgroundColor: "#FDECEF", // warna background soft pink
+    borderRadius: 50, // bikin bulat
     width: 60,
     height: 60,
-    borderRadius: 30, // setengah dari width/height
-    borderWidth: 1,
-    borderColor: "#FFE5F8",
-    backgroundColor: "#FFE5F8",
-    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 5,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3, // shadow android
   },
 
   bookingContainer: {

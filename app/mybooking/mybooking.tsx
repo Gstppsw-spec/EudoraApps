@@ -11,11 +11,15 @@ import {
   Switch,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import Constants from "expo-constants";
 import { StatusBar } from "react-native";
 import Toast from "react-native-toast-message";
@@ -332,7 +336,7 @@ const MyBookingUpcoming = () => {
                       <View style={styles.row}>
                         <Image
                           source={{
-                            uri: `${apiUrl}/upload/${booking.IMAGE}`,
+                            uri: `${apiUrl}/${booking.IMAGE}`,
                           }}
                           style={styles.clinicImage}
                         />
@@ -424,7 +428,7 @@ const MyBookingUpcoming = () => {
                         <View style={styles.row}>
                           <Image
                             source={{
-                              uri: `${apiUrl}/upload/${booking.IMAGE}`,
+                              uri: `${apiUrl}/${booking.IMAGE}`,
                             }}
                             style={styles.clinicImage}
                           />
@@ -507,7 +511,7 @@ const MyBookingUpcoming = () => {
                         <View style={styles.row}>
                           <Image
                             source={{
-                              uri: `${apiUrl}/upload/${booking.IMAGE}`,
+                              uri: `${apiUrl}/${booking.IMAGE}`,
                             }}
                             style={styles.clinicImage}
                           />
@@ -547,6 +551,14 @@ const MyBookingUpcoming = () => {
         snapPoints={snapPoints}
         enablePanDownToClose
         backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+            pressBehavior="close"
+          />
+        )}
       >
         <BottomSheetView style={styles.modalContent}>
           <Text style={styles.modalTitle}>Cancel Booking</Text>
@@ -707,29 +719,29 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalMessage: {
     fontSize: 14,
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
   modalButton: {
-     flex: 1,
+    flex: 1,
     padding: 12,
     marginHorizontal: 5,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   header: {
     flexDirection: "row",

@@ -5,6 +5,7 @@ import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   Linking,
   ScrollView,
@@ -72,6 +73,7 @@ const getGooglePlaceRating = async (placeId: string) => {
 const ClinicDetailScreen = () => {
   const router = useRouter();
   const locationId = useStore((state: { locationId: any }) => state.locationId);
+  const windowWidth = Dimensions.get('window').width;
 
   const {
     data: clinicData,
@@ -156,18 +158,7 @@ const ClinicDetailScreen = () => {
           clinicData?.clinicEuodora[0]?.address || "Bintaro Jaya Exchange"
         )}`,
       });
-
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          console.log("Shared with activity type:", result.activityType);
-        } else {
-          console.log("Klinik dibagikan.");
-        }
-      } else if (result.action === Share.dismissedAction) {
-        console.log("Share dibatalkan.");
-      }
     } catch (error) {
-      console.error("Gagal share:", error.message);
     }
   };
 
@@ -199,13 +190,25 @@ const ClinicDetailScreen = () => {
       <ScrollView>
         <View style={{ flex: 1 }}>
           {clinicData?.clinicEuodora[0]?.image ? (
-            <Image
-              source={{
-                uri: `${apiUrl}/upload/${clinicData?.clinicEuodora[0]?.image}`,
-              }}
-              style={styles.clinicImage}
-              resizeMode="cover"
-            />
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+            >
+              {[
+                clinicData?.clinicEuodora[0]?.image,
+                clinicData?.clinicEuodora[0]?.image2,
+              ]
+                .filter(Boolean)
+                .map((img, i) => (
+                  <Image
+                    key={i}
+                    source={{ uri: `${apiUrl}/${img}` }}
+                    style={{ width: windowWidth, height: 250 }}
+                    resizeMode="cover"
+                  />
+                ))}
+            </ScrollView>
           ) : (
             <View style={styles.placeholder}>
               <Text style={styles.placeholderText}>
@@ -349,7 +352,7 @@ const ClinicDetailScreen = () => {
                   <View style={styles.doctorCard}>
                     <Image
                       source={{
-                        uri: `${apiUrl}/uploads/${doctor.image}`,
+                        uri: `${apiUrl}/uploads/doctor/${doctor.image}`,
                       }}
                       style={styles.doctorImage}
                     />

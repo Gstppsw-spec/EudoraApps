@@ -1,6 +1,16 @@
+import SaldoPointCard from "@/app/component/saldoPoint";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import Constants from "expo-constants";
 import { Link, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   Modal,
@@ -13,10 +23,31 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-// import { SafeAreaView } from "react-native-safe-area-context";
-import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import Toast from "react-native-toast-message";
 import useStore from "../../../store/useStore";
+
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
+
+const sendTokenNotification = async (formData: any) => {
+  const response = await axios.post(`${apiUrl}/save_push_token`, formData, {
+    headers: { "Content-Type": "application/json" },
+  });
+  return response.data;
+};
+
+const getCustomerSaldo = async ({ queryKey }: any) => {
+  const [, customerid, token] = queryKey;
+  const res = await fetch(`${apiUrl}/api/transactions/getCustomerSaldo`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      auth_token_customer: `${token}`,
+      customerid: `${customerid}`,
+    },
+  });
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+};
 
 const MyAccountScreen = () => {
   const router = useRouter();
@@ -25,36 +56,77 @@ const MyAccountScreen = () => {
   const lang = useStore((state) => state.lang);
   const setLang = useStore((state) => state.setLang);
   const customerDetails = useStore((state) => state.customerDetails);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const profileImage = useStore((state) => state.profileImage);
-
+  const token = useStore((state) => state.token);
+  const customerid = useStore((state) => state.customerid);
+  const { t } = useTranslation();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ["35%", "50%"], []);
+  const snapPoints = useMemo(() => ["32%", "45%"], []);
 
   const handleShowLogout = useCallback(() => {
     bottomSheetModalRef.current?.present();
-    console.log('muncul');
-    
   }, []);
+
+  const { data, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["getCustomerSaldo", customerid, customerDetails?.token],
+    queryFn: getCustomerSaldo,
+    enabled: !!customerid || customerDetails?.token,
+  });
 
   const handleCancel = () => {
     bottomSheetModalRef.current?.dismiss();
   };
 
-  const handleLogOut = () => {
-    router.replace("/authentication/otpWhatsapp");
-    bottomSheetModalRef.current?.dismiss();
-    setTimeout(() => {
-      Toast.show({
-        type: "success",
-        text1: "Sukses",
-        text2: "Logout berhasil!",
-        position: "top",
-        visibilityTime: 2000,
-      });
+  const mutation = useMutation({
+    mutationFn: sendTokenNotification,
+    onSuccess: () => {
+      router.replace("/authentication/otpWhatsapp");
+      bottomSheetModalRef.current?.dismiss();
+      setTimeout(() => {
+        Toast.show({
+          type: "success",
+          text1: t("successTitle"),
+          text2: t("logoutSuccess"),
+          position: "top",
+          visibilityTime: 2000,
+        });
+        clearCustomerId();
+      }, 300);
+    },
+    onError: () => {
+      setTimeout(() => {
+        Toast.show({
+          type: "error",
+          text1: t("error"),
+          text2: t("logoutFailed"),
+          position: "top",
+          visibilityTime: 2000,
+        });
+      }, 300);
+    },
+  });
 
-      clearCustomerId();
-    }, 300);
+  const handleLogOut = () => {
+    if (customerid && token) {
+      mutation.mutate({
+        customerid: customerid,
+        push_token: token,
+        type: 0,
+      });
+    } else {
+      router.replace("/authentication/otpWhatsapp");
+      bottomSheetModalRef.current?.dismiss();
+      setTimeout(() => {
+        Toast.show({
+          type: "success",
+          text1: t("successTitle"),
+          text2: t("logoutSuccess"),
+          position: "top",
+          visibilityTime: 2000,
+        });
+        clearCustomerId();
+      }, 300);
+    }
   };
 
   const languages = [
@@ -70,115 +142,147 @@ const MyAccountScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Profile Section */}
+      <View style={styles.header}></View>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
       <Link href="/tabs/account/details" style={styles.profileSection}>
         <View style={styles.profileSectionContent}>
           {profileImage ? (
             <Image source={{ uri: profileImage }} style={styles.avatar} />
           ) : (
             <View style={styles.iconWrapper}>
-              <FontAwesome5 name="user" size={35} color="#aaa" />
+              <FontAwesome5 name="user" size={40} color="#4a90e2" />
             </View>
           )}
-
           <View style={styles.profileInfo}>
-            <Text style={styles.name}>{customerDetails?.fullname}</Text>
-            <Text style={styles.email}>{customerDetails?.phone}</Text>
+            <Text style={styles.name}>
+              {customerDetails?.fullname || "Guest"}
+            </Text>
+            <Text style={styles.email}>
+              {customerDetails?.phone || "No phone"}
+            </Text>
           </View>
-          <MaterialIcons name="chevron-right" size={24} color="#999" />
+          <View style={styles.chevronWrapper}>
+            <MaterialIcons name="chevron-right" size={28} color="#4a90e2" />
+          </View>
         </View>
       </Link>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Personal Info Section */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>General</Text>
-          <View style={styles.sectionItem}>
-            {/* Your Treatment Section */}
-            <Link href="/treatment/yourTeatment" asChild>
-              <TouchableOpacity style={styles.menuItem}>
-                <Text style={styles.menuText}>My Treatment & Package</Text>
-                <MaterialIcons name="chevron-right" size={24} color="#999" />
-              </TouchableOpacity>
-            </Link>
-
-            <Link href="/mybooking/myBooking" asChild>
-              <TouchableOpacity style={styles.menuItem}>
-                <Text style={styles.menuText}>My History</Text>
-                <MaterialIcons name="chevron-right" size={24} color="#999" />
-              </TouchableOpacity>
-            </Link>
-          </View>
-
-          <Link href="/notification" asChild>
-            <TouchableOpacity style={styles.menuItem}>
-              <Text style={styles.menuText}>Push Notification</Text>
-              <MaterialIcons name="chevron-right" size={24} color="#999" />
+        <SaldoPointCard saldo={data?.data} />
+        <View style={[styles.card, styles.highlightCard]}>
+          <Link href="/static/claimTreatment" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8}>
+              <View>
+                <Text style={styles.highlightTitle}>
+                  Klaim treatment gratis kamu!
+                </Text>
+                <Text style={styles.highlightDesc}>
+                  Klaim treatment gratis karena sudah install Eudora Aesthetic
+                </Text>
+              </View>
             </TouchableOpacity>
           </Link>
+        </View>
+        {/* General Section */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>{t("general")}</Text>
+          <Link href="/treatment/yourTeatment" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>{t("treatmentAndPackage")}</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
+            </TouchableOpacity>
+          </Link>
+
+          <Link href="/mybooking/myBooking" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>{t("myHistory")}</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
+            </TouchableOpacity>
+          </Link>
+
+          <Link href="/notification" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>{t("pushNotification")}</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
+            </TouchableOpacity>
+          </Link>
+
           <TouchableOpacity
             style={styles.menuItem}
             activeOpacity={0.7}
             onPress={() => setLanguageModalVisible(true)}
           >
             <View style={styles.menuTextContainer}>
-              <Text style={styles.menuText}>Language</Text>
+              <Text style={styles.menuText}>{t("language")}</Text>
               <Text style={styles.cacheSize}>
                 {languages.find((langObj) => langObj.value === lang)?.label}
               </Text>
             </View>
-            <MaterialIcons name="chevron-right" size={24} color="#999" />
+            <MaterialIcons name="chevron-right" size={24} color="#bbb" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <View style={styles.menuTextContainer}>
-              <Text style={styles.menuText}>Clear Cache</Text>
-              <Text style={styles.cacheSize}>88 MB</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color="#999" />
-          </TouchableOpacity>
+          <Link href="/static/myRefferal" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>{t("myReferral")}</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
+            </TouchableOpacity>
+          </Link>
+
+          <Link href="/transaction" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>Transaksi</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
+            </TouchableOpacity>
+          </Link>
         </View>
-
         {/* About Section */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle}>{t("about")}</Text>
 
-          <View style={styles.sectionItem}>
-            {/* <Link href="/help-center" asChild> */}
+          <Link href="/static/help-center" asChild>
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <Text style={styles.menuText}>Help Center</Text>
-              <MaterialIcons name="chevron-right" size={24} color="#999" />
+              <Text style={styles.menuText}>{t("helpCenter")}</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
             </TouchableOpacity>
-            {/* </Link> */}
+          </Link>
 
-            <Link href="/static/privacy-policy" asChild>
-              <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                <Text style={styles.menuText}>Privacy & Policy</Text>
-                <MaterialIcons name="chevron-right" size={24} color="#999" />
-              </TouchableOpacity>
-            </Link>
-
-            <Link href="/static/about" asChild>
-              <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                <Text style={styles.menuText}>About</Text>
-                <MaterialIcons name="chevron-right" size={24} color="#999" />
-              </TouchableOpacity>
-            </Link>
-
-            {/* <Link href="/terms-and-conditions" asChild> */}
+          <Link href="/static/privacy-policy" asChild>
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <Text style={styles.menuText}>Terms & Conditions</Text>
-              <MaterialIcons name="chevron-right" size={24} color="#999" />
+              <Text style={styles.menuText}>{t("privacyPolicy")}</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
             </TouchableOpacity>
+          </Link>
 
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={() => handleShowLogout()}
-            >
-              <Text style={styles.menuText}>Logout</Text>
+          <Link href="/static/about" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>{t("about")}</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
             </TouchableOpacity>
-          </View>
+          </Link>
+
+          <Link href="/static/term-conditions" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>{t("termsConditions")}</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
+            </TouchableOpacity>
+          </Link>
+
+          <TouchableOpacity
+            style={[
+              styles.menuItem,
+              { borderTopWidth: 1, borderTopColor: "#eee" },
+            ]}
+            activeOpacity={0.7}
+            onPress={handleShowLogout}
+          >
+            <Text style={[styles.menuText, { color: "#e53935" }]}>
+              {t("logout")}
+            </Text>
+            <MaterialIcons name="logout" size={24} color="#e53935" />
+          </TouchableOpacity>
         </View>
       </ScrollView>
       <Modal
@@ -207,31 +311,36 @@ const MyAccountScreen = () => {
           </View>
         </Pressable>
       </Modal>
-
       <BottomSheetModal
         ref={bottomSheetModalRef}
         snapPoints={snapPoints}
         enablePanDownToClose
         backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+            pressBehavior="close"
+          />
+        )}
       >
         <BottomSheetView style={styles.modalContentSheet}>
-          <Text style={styles.modalTitleSheet}>Logout</Text>
-          <Text style={styles.modalMessage}>
-            Are you sure you want to logout?
-          </Text>
+          <Text style={styles.modalTitleSheet}>{t("logout")}</Text>
+          <Text style={styles.modalMessage}>{t("confirmLogout")}</Text>
           <View style={styles.modalButtons}>
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+              style={[styles.modalButtonSheet, { backgroundColor: "#eee" }]}
               onPress={handleCancel}
             >
-              <Text style={styles.modalButtonText}>Cancel</Text>
+              <Text style={styles.modalButtonText}>{t("cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButtonSheet, { backgroundColor: "#f87171" }]}
+              style={[styles.modalButtonSheet, { backgroundColor: "#e53935" }]}
               onPress={handleLogOut}
             >
               <Text style={[styles.modalButtonText, { color: "white" }]}>
-                Confirm
+                {t("confirm")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -242,78 +351,85 @@ const MyAccountScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f8f8",
-  },
+  container: { flex: 1, backgroundColor: "#f5f6fa" },
   profileSection: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 12,
+    borderRadius: 16,
     backgroundColor: "#fff",
-    marginBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    paddingTop: StatusBar.currentHeight,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+    overflow: "hidden",
   },
   profileSectionContent: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: 10,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
+    borderColor: "#4a90e2",
     marginRight: 16,
+  },
+  iconWrapper: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#f0f4f8",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: "#4a90e2",
   },
   profileInfo: {
     flex: 1,
-    marginLeft: 10,
   },
   name: {
-    fontSize: 18,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "bold",
     color: "#333",
     marginBottom: 4,
   },
   email: {
     fontSize: 14,
-    color: "#666",
+    color: "#777",
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
+  chevronWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
   },
+  content: { flex: 1, paddingHorizontal: 16 },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 16,
     paddingHorizontal: 16,
     paddingVertical: 8,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
+  highlightCard: {
+    borderLeftWidth: 5,
+    borderLeftColor: "#4CAF50",
+  },
+  highlightTitle: { fontSize: 15, fontWeight: "bold", color: "#222" },
+  highlightDesc: { fontSize: 12, color: "#555", marginTop: 2 },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: "500",
-    color: "#333",
-    paddingVertical: 12,
-  },
-  sectionItem: {
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-  },
-  subSectionTitle: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#888",
-    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#444",
     marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   menuItem: {
     flexDirection: "row",
@@ -321,18 +437,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 14,
   },
-  menuText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  cacheSize: {
-    fontSize: 14,
-    color: "#999",
-    marginLeft: 8,
-  },
+  menuText: { fontSize: 15, color: "#333" },
+  cacheSize: { fontSize: 13, color: "#888", marginLeft: 8 },
+  menuTextContainer: { flexDirection: "row", alignItems: "center" },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -342,117 +452,36 @@ const styles = StyleSheet.create({
     width: "80%",
     paddingVertical: 16,
     paddingHorizontal: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
     elevation: 5,
   },
-  languageOption: {
-    padding: 12,
-    // borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
+  languageOption: { padding: 12 },
   languageOptionSelected: {
     backgroundColor: "#f0f0f0",
-    borderRadius: 10,
+    borderRadius: 8,
   },
-  menuTextContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  modalContainer: {
-    width: "80%",
-    backgroundColor: "white",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  modalHeader: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-    color: "#333",
-  },
-  modalBody: {
-    padding: 20,
-  },
-  modalText: {
-    fontSize: 16,
-    textAlign: "center",
-    color: "#666",
-    lineHeight: 24,
-  },
-  modalFooter: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-  },
-  modalButton: {
-    flex: 1,
-    padding: 16,
-    alignItems: "center",
-  },
-  cancelButton: {
-    borderRightWidth: 1,
-    borderRightColor: "#f0f0f0",
-  },
-  cancelButtonText: {
-    color: "#666",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  confirmButton: {
-    backgroundColor: "#f8f8f8",
-  },
-  confirmButtonText: {
-    color: "#ff4444",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  iconWrapper: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#eee",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#ccc",
-  },
-  modalContentSheet: {
-    padding: 20,
-    alignItems: "center",
-  },
-  modalTitleSheet: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    textAlign: "center",
-  },
+  modalContentSheet: { padding: 20, alignItems: "center" },
+  modalTitleSheet: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
   modalMessage: {
     fontSize: 14,
-    marginBottom: 20,
+    color: "#666",
     textAlign: "center",
+    marginBottom: 20,
   },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  modalButtons: { flexDirection: "row", justifyContent: "space-between" },
   modalButtonSheet: {
     flex: 1,
     padding: 12,
     marginHorizontal: 5,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: "center",
   },
-  modalButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
+  modalButtonText: { fontSize: 14, fontWeight: "600" },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomColor: "#e0e0e0",
+    paddingTop: StatusBar.currentHeight,
   },
 });
 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1055086320884",
+    "project_id": "eudoraapps-b125c",
+    "storage_bucket": "eudoraapps-b125c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1055086320884:android:3eca78a3e02ae004f012a1",
+        "android_client_info": {
+          "package_name": "com.anonymous.DashboardCustomerEudora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1VTPd4m054MGcy3dqdbHqdzmpPdI4nKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

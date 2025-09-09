@@ -37,18 +37,15 @@ export default function SetPin() {
 
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
+  const setHasPin = useStore((state) => state.setHasPin);
 
   const mutation = useMutation({
     mutationFn: setPinUsers,
     onSuccess: (data) => {
       if (data.status) {
+        setHasPin(true)
         router.replace("/tabs/home");
         registerForPushNotificationsAsync().then((token) => {
-          if (token) {
-            console.log("✅ Expo Push Token:", token);
-          } else {
-            console.log("❌ Tidak mendapatkan token");
-          }
         });
       } else {
         Alert.alert("Gagal", data.message || "Gagal menyimpan PIN");
@@ -157,23 +154,20 @@ async function registerForPushNotificationsAsync() {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-
-      console.log("Status permission:", finalStatus);
-
       if (finalStatus !== "granted") {
         alert("Gagal mendapatkan permission notifikasi!");
         return;
       }
 
       token = (await Notifications.getExpoPushTokenAsync()).data;
-      console.log("✅ Token:", token);
+
     } else {
       alert("Harus dijalankan di perangkat fisik!");
     }
 
     return token;
   } catch (e) {
-    console.log("❌ Error saat register notifikasi:", e);
+
   }
 }
 
@@ -228,7 +222,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#1e293b",
     textAlign: "center",
-    letterSpacing: 4,
+    letterSpacing: 2,
   },
   button: {
     backgroundColor: "#B0174C",
