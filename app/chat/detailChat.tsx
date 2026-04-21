@@ -8,13 +8,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  RefreshControl,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -25,6 +25,8 @@ import {
   View,
 } from "react-native";
 import { io } from "socket.io-client";
+import ErrorView from "../component/errorView";
+import LoadingView from "../component/loadingView";
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const socket = io("https://sys.eudoraclinic.com:3001");
@@ -97,6 +99,7 @@ const ChatScreen = () => {
   const [imageUri, setImageUri] = useState(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const { t } = useTranslation();
+  const [refreshing, setRefreshing] = useState(false);
 
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
@@ -324,19 +327,31 @@ const ChatScreen = () => {
     };
   }, [customerId]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+
+    try {
+      await Promise.all([refetch()]);
+    } catch (error) {
+      console.log("Error refreshing:", error);
+    }
+
+    setRefreshing(false);
+  };
+
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
+      <SafeAreaView style={styles.container}>
+        <LoadingView />
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text>Error loading messages: {error.message}</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <ErrorView onRetry={onRefresh} />
+      </SafeAreaView>
     );
   }
 
@@ -381,9 +396,9 @@ const ChatScreen = () => {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
-          //   refreshControl={
-          //     <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
-          //   }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
 
         {/* Message Input */}

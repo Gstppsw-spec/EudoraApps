@@ -158,7 +158,7 @@ const NotificationsScreen = () => {
                 key={notification.broadcast_id}
               >
                 <View style={styles.notificationIcon}>
-                  <Ionicons name="notifications" size={24} color="#FFB900" />
+                  <Ionicons name="notifications" size={24} color="#B0174C" />
                 </View>
                 <View style={styles.textContainer}>
                   <Text style={styles.title}>{notification.title}</Text>

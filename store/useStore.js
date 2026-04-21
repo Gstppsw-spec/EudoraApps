@@ -10,6 +10,7 @@ const useStore = create(
       hasPin: false,
       pendingRoute: null,
       locationId: null,
+      locationName: null,
       profileImage: null, 
       lang: 'en',
       hasOnboarding: false,
@@ -29,6 +30,7 @@ const useStore = create(
 
       // Reminder list
       reminders: [],
+      jwt_token: null,
 
       // Setters
       setCustomerId: (id) => set({ customerid: id }),
@@ -36,8 +38,10 @@ const useStore = create(
       setPendingRoute: (route) => set({ pendingRoute: route }),
       clearPendingRoute: () => set({ pendingRoute: null }),
       setLocationId: (id) => set({ locationId: id }),
+      setLocationName: (name) => set({ locationName: name }),
       setHasOnboarding: (status) => set({ hasOnboarding: status }),
       setToken: (token) => set({ token: token }),
+      setJwtToken: (jwt_token) => set({ jwt_token: jwt_token }),
       setSelectedProducts: (products: any[]) => set({ selectedProducts: products }),
       addSelectedProduct: (product: any) => set((state) => ({ selectedProducts: [...state.selectedProducts, product] })),
       removeSelectedProduct: (id: number) =>set((state) => ({selectedProducts: state.selectedProducts.filter((i) => i.id !== id),})),

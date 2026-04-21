@@ -39,11 +39,13 @@ export default function VerifyPin() {
   const { t } = useTranslation();
   const lang = useStore((state) => state.lang);
   const [isFocused, setIsFocused] = useState(false);
+  const setJwtToken = useStore((state) => state.setJwtToken);
 
   const mutation = useMutation({
     mutationFn: verifyPinUsers,
     onSuccess: (data) => {
       if (data.status) {
+        setJwtToken(data.token);
         if (pendingRoute) {
           router.push("/" + pendingRoute);
           setPendingRoute(null);
@@ -125,7 +127,7 @@ export default function VerifyPin() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.resendButton}
-            onPress={() => router.push('/authentication/forgetPin')}
+            onPress={() => router.push("/authentication/forgetPin")}
           >
             <Text style={styles.resendText}>Forgot PIN ? </Text>
             <Text style={styles.resendLink}>Request Change</Text>

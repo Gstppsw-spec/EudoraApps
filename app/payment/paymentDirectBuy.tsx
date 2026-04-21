@@ -9,13 +9,13 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import HeaderWithBack from "../component/headerWithBack";
 import { useXenditPayment } from "../component/paymentHooks";
@@ -37,8 +37,15 @@ const fetchProductDirectBuy = async ({ queryKey }: any) => {
   return res.json();
 };
 
-const fetchListClinic = async () => {
-  const res = await fetch(`${apiUrl}/getClinic`);
+const fetchListClinicTransaction = async () => {
+  const res = await fetch(`${apiUrl}/getClinicTransactions`);
+  if (!res.ok) throw new Error("Network response was not ok");
+  return res.json();
+};
+
+const fetchListConsultant = async ({ queryKey }: any) => {
+  const [, locationid] = queryKey;
+  const res = await fetch(`${apiUrl}/getConsultantRecomendation/${locationid}`);
   if (!res.ok) throw new Error("Network response was not ok");
   return res.json();
 };
@@ -50,6 +57,7 @@ const PaymentDirectBuyScreen = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const customerDetails = useStore((state) => state.customerDetails);
+  const [type, setType] = useState(null);
 
   const handlePresentBottomSheet = () => {
     bottomSheetModalRef.current?.present();
@@ -57,6 +65,8 @@ const PaymentDirectBuyScreen = () => {
   const [formData, setFormData] = useState({
     clinicLocation: "",
     clinicId: null,
+    consultantId: null,
+    consultantName: "",
   });
 
   const handleDismissBottomSheet = () => {
@@ -74,8 +84,14 @@ const PaymentDirectBuyScreen = () => {
     error: errorclinic,
     isLoading: isLoadingclinic,
   } = useQuery({
-    queryKey: ["getClinic"],
-    queryFn: fetchListClinic,
+    queryKey: ["getClinicTransactions"],
+    queryFn: fetchListClinicTransaction,
+  });
+
+  const { data: consultantOptions } = useQuery({
+    queryKey: ["getConsultantRecomendation", formData?.clinicId],
+    queryFn: fetchListConsultant,
+    enabled: !!formData?.clinicId,
   });
 
   const {
@@ -94,6 +110,13 @@ const PaymentDirectBuyScreen = () => {
 
   const filteredClinics = clinicOptions?.clinicEuodora?.filter((clinic) =>
     clinic?.name?.toLowerCase().includes(debouncedQuery.toLowerCase())
+  );
+
+  const filteredConsultant = consultantOptions?.consultantRecomendation?.filter(
+    (consultant) =>
+      consultant?.consultantname
+        ?.toLowerCase()
+        .includes(debouncedQuery.toLowerCase())
   );
 
   const sortedClinics = (filteredClinics || [])
@@ -132,7 +155,9 @@ const PaymentDirectBuyScreen = () => {
       amount: getTotal(),
       location_id: formData?.clinicId,
       customer_id: customerId,
+      consultantid: formData?.consultantId,
       detail: data?.data,
+      consultant_id: formData?.consultantId,
     });
   };
 
@@ -152,8 +177,88 @@ const PaymentDirectBuyScreen = () => {
     </View>
   );
 
+  const renderItemLocation = ({ item }: any) => {
+    const distance = distances?.[item.id];
+    const formattedDistance = loadingDistance
+      ? "Menghitung..."
+      : distance !== undefined
+      ? `${distance.toFixed(2)} KM`
+      : "? KM";
+
+    const isSelected = formData.clinicId === item.id;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.clinicCard,
+          isSelected && { borderColor: "#B0174C", borderWidth: 1 },
+        ]}
+        onPress={() => {
+          setFormData(() => ({
+            clinicLocation: item.name,
+            clinicId: item.id,
+            consultantId: null,
+            consultantName: "",
+          }));
+
+          handleDismissBottomSheet();
+        }}
+      >
+        <Ionicons
+          name="business-outline"
+          size={22}
+          color="#B0174C"
+          style={{ marginRight: 10 }}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.clinicNameText}>{item?.name}</Text>
+          <Text style={styles.clinicDistanceText}>
+            Jarak: {formattedDistance}
+          </Text>
+        </View>
+        {isSelected && (
+          <Ionicons name="checkmark-circle" size={22} color="#B0174C" />
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderItemConsultant = ({ item }: any) => {
+    const isSelected = formData.consultantId === item.consultantid;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.clinicCard,
+          isSelected && { borderColor: "#B0174C", borderWidth: 1 },
+        ]}
+        onPress={() => {
+          setFormData((prev) => ({
+            ...prev,
+            consultantName: item.consultantname,
+            consultantId: item.consultantid,
+          }));
+
+          handleDismissBottomSheet();
+        }}
+      >
+        <Ionicons
+          name="people"
+          size={22}
+          color="#B0174C"
+          style={{ marginRight: 10 }}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.clinicNameText}>{item?.consultantname}</Text>
+        </View>
+        {isSelected && (
+          <Ionicons name="checkmark-circle" size={22} color="#B0174C" />
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'top']}>
       {/* HEADER */}
       <View style={styles.headerContainer}>
         <HeaderWithBack title="Detail Pembelian" useGoBack />
@@ -168,14 +273,40 @@ const PaymentDirectBuyScreen = () => {
             if (isBottomSheetOpen) {
               handleDismissBottomSheet();
               setIsBottomSheetOpen(false);
+              setType(null);
             } else {
               handlePresentBottomSheet();
               setIsBottomSheetOpen(true);
+              setType("LOCATION");
             }
           }}
         >
           <Text style={styles.text}>
             {formData.clinicLocation || "Pilih Klinik Pembelian"}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#64748b" />
+        </Pressable>
+      </View>
+
+      {/* PILIH REKOMENDASI CONSULTANT */}
+      <View style={styles.inputGroup}>
+        <Pressable
+          style={styles.dropdownContainer}
+          onPress={() => {
+            if (isBottomSheetOpen) {
+              handleDismissBottomSheet();
+              setIsBottomSheetOpen(false);
+              setType(null);
+            } else {
+              handlePresentBottomSheet();
+              setIsBottomSheetOpen(true);
+              setType("CONSULTANT");
+            }
+          }}
+        >
+          <Text style={styles.text}>
+            {formData.consultantName ||
+              "Pilih Consultant Rekomendasi (Opsional)"}
           </Text>
           <Ionicons name="chevron-down" size={20} color="#64748b" />
         </Pressable>
@@ -232,12 +363,15 @@ const PaymentDirectBuyScreen = () => {
         ref={bottomSheetModalRef}
         snapPoints={["50%", "90%"]}
         enablePanDownToClose
-        onDismiss={() => setIsBottomSheetOpen(false)}
+        onDismiss={() => {
+          setIsBottomSheetOpen(false);
+          setType(null);
+        }}
         keyboardBehavior="interactive"
         backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
       >
         <BottomSheetFlatList
-          data={sortedClinics}
+          data={type === "LOCATION" ? sortedClinics : filteredConsultant}
           keyExtractor={(item) => String(item?.id)}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -254,10 +388,16 @@ const PaymentDirectBuyScreen = () => {
                   marginBottom: 12,
                 }}
               />
-              <Text style={styles.modalTitleSheet}>Pilih Klinik Terdekat</Text>
+              <Text style={styles.modalTitleSheet}>
+                {type === "LOCATION"
+                  ? "Pilih Klinik Terdekat"
+                  : "Pilih Rekomendasi Sales (Opsional)"}
+              </Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Cari Klinik..."
+                placeholder={
+                  type === "LOCATION" ? "Cari Klinik..." : "Cari Consultant"
+                }
                 placeholderTextColor="#9ca3af"
                 onChangeText={setSearchQuery}
                 value={searchQuery}
@@ -273,48 +413,9 @@ const PaymentDirectBuyScreen = () => {
               </Text>
             </View>
           )}
-          renderItem={({ item }) => {
-            const distance = distances?.[item.id];
-            const formattedDistance = loadingDistance
-              ? "Menghitung..."
-              : distance !== undefined
-              ? `${distance.toFixed(2)} KM`
-              : "? KM";
-
-            const isSelected = formData.clinicId === item.id;
-
-            return (
-              <TouchableOpacity
-                style={[
-                  styles.clinicCard,
-                  isSelected && { borderColor: "#B0174C", borderWidth: 1 },
-                ]}
-                onPress={() => {
-                  setFormData({
-                    clinicLocation: item.name,
-                    clinicId: item.id,
-                  });
-                  handleDismissBottomSheet();
-                }}
-              >
-                <Ionicons
-                  name="business-outline"
-                  size={22}
-                  color="#B0174C"
-                  style={{ marginRight: 10 }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.clinicNameText}>{item?.name}</Text>
-                  <Text style={styles.clinicDistanceText}>
-                    Jarak: {formattedDistance}
-                  </Text>
-                </View>
-                {isSelected && (
-                  <Ionicons name="checkmark-circle" size={22} color="#B0174C" />
-                )}
-              </TouchableOpacity>
-            );
-          }}
+          renderItem={
+            type === "LOCATION" ? renderItemLocation : renderItemConsultant
+          }
         />
       </BottomSheetModal>
     </SafeAreaView>

@@ -56,13 +56,14 @@ const verifyOtp = async (formData: any) => {
       headers: {
         "Content-Type": "application/json",
       },
-    }
+    },
   );
   return response.data;
 };
 
 export default function Register() {
   const router = useRouter();
+  const setJwtToken = useStore((state) => state.setJwtToken);
   const [formData, setFormData] = useState({
     firstname: "",
     lastname: "",
@@ -190,6 +191,7 @@ export default function Register() {
     mutationFn: verifyOtp,
     onSuccess: (data) => {
       if (data.status) {
+        setJwtToken(data.jwt_token);
         setCustomerId(data.last_customer_id);
         setCustomerDetails({
           fullname:
@@ -199,7 +201,7 @@ export default function Register() {
           gender: data?.dataCustomer?.sex,
           dateofbirth: data?.dataCustomer?.dateofbirth,
           locationCustomerRegister: data?.dataCustomer?.locationid,
-          token: data?.token
+          token: data?.token,
         });
         Toast.show({
           type: "success",
@@ -233,7 +235,7 @@ export default function Register() {
       if (!isValidPhoneNumber(formData.phone)) {
         Alert.alert(
           "Error",
-          "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan."
+          "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan.",
         );
         return;
       }
@@ -285,24 +287,24 @@ export default function Register() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  const filteredClinics = clinicOptions?.clinicEuodora?.filter((clinic) =>
-    clinic?.name?.toLowerCase().includes(debouncedQuery.toLowerCase())
+  const filteredClinics = clinicOptions?.clinicEuodora?.filter((clinic: any) =>
+    clinic?.name?.toLowerCase().includes(debouncedQuery.toLowerCase()),
   );
 
   const sortedClinics = (filteredClinics || [])
-    .map((clinic) => {
+    .map((clinic: any) => {
       const distance = distances?.[clinic.id];
       return {
         ...clinic,
         distance: distance ?? Infinity,
       };
     })
-    .sort((a, b) => a.distance - b.distance);
+    .sort((a: any, b: any) => a.distance - b.distance);
 
   const renderWhatsAppInput = () => (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>
-        Whatsapp <Text style={{ color: "red" }}>*</Text>
+        Phone <Text style={{ color: "red" }}>*</Text>
       </Text>
       <View style={styles.phoneInputContainer}>
         <TouchableOpacity
@@ -514,8 +516,8 @@ export default function Register() {
                             const formattedDistance = loading
                               ? "Menghitung..."
                               : distance !== undefined
-                              ? `${distance.toFixed(2)} KM`
-                              : "? KM";
+                                ? `${distance.toFixed(2)} KM`
+                                : "? KM";
 
                             return (
                               <TouchableOpacity

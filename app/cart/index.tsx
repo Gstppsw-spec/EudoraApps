@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import HeaderWithBack from "../component/headerWithBack";
 
@@ -35,7 +35,7 @@ const updateQtyAndStatusCart = async (formData: any) => {
       headers: {
         "Content-Type": "application/json",
       },
-    }
+    },
   );
   return response.data;
 };
@@ -64,7 +64,7 @@ const CartScreen = () => {
 
   const toggleSelectAll = () => {
     const allSelected = data?.data?.every(
-      (item: any) => item.is_on_payment === 1
+      (item: any) => item.is_on_payment === 1,
     );
     mutation.mutate({
       idcart: customerId,
@@ -129,7 +129,7 @@ const CartScreen = () => {
       ? data.data.reduce(
           (sum: number, item: any) =>
             item.is_on_payment === 1 ? sum + item.price * item.qty : sum,
-          0
+          0,
         )
       : 0;
 
@@ -169,7 +169,7 @@ const CartScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom", "top"]}>
       <HeaderWithBack title="Keranjang" useGoBack />
 
       {data?.data?.length !== 0 && (

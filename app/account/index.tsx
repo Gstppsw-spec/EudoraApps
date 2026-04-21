@@ -1,4 +1,5 @@
 import SaldoPointCard from "@/app/component/saldoPoint";
+import useStore from "@/store/useStore";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import {
   BottomSheetBackdrop,
@@ -24,7 +25,7 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import useStore from "../../../store/useStore";
+import HeaderWithBack from "../component/headerWithBack";
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
@@ -70,7 +71,7 @@ const MyAccountScreen = () => {
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["getCustomerSaldo", customerid, customerDetails?.token],
     queryFn: getCustomerSaldo,
-    enabled: !!customerid || customerDetails?.token,
+    enabled: !!customerid && !!customerDetails?.token,
   });
 
   const handleCancel = () => {
@@ -135,20 +136,15 @@ const MyAccountScreen = () => {
     { label: "中文 (Mandarin)", value: "zh" },
   ];
 
-  const handleSelectLanguage = (lang) => {
+  const handleSelectLanguage = (lang: any) => {
     setLang(lang.value);
     setLanguageModalVisible(false);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}></View>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle="dark-content"
-      />
-      <Link href="/tabs/account/details" style={styles.profileSection}>
+      <HeaderWithBack title="Profile" useGoBack />
+      <Link href="/account/details" style={styles.profileSection}>
         <View style={styles.profileSectionContent}>
           {profileImage ? (
             <Image source={{ uri: profileImage }} style={styles.avatar} />
@@ -234,6 +230,20 @@ const MyAccountScreen = () => {
           <Link href="/transaction" asChild>
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
               <Text style={styles.menuText}>Transaksi</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
+            </TouchableOpacity>
+          </Link>
+
+          <Link href="/validation-prepaid" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>Validasi Pemotongan</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#bbb" />
+            </TouchableOpacity>
+          </Link>
+
+          <Link href="/ereceipt-prepaid" asChild>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <Text style={styles.menuText}>E-Receipt Pemotongan</Text>
               <MaterialIcons name="chevron-right" size={24} color="#bbb" />
             </TouchableOpacity>
           </Link>

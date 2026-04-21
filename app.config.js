@@ -5,7 +5,7 @@ export default ({ config }) => ({
     name: "Eudora Aesthetic",
     slug: "DashboardCustomerEudora",
     owner: "gstp_psw15",
-    version: "1.0.6",
+    version: "1.0.8",
     orientation: "portrait",
     scheme: "dashboardcustomereudora",
     userInterfaceStyle: "light",
@@ -66,7 +66,14 @@ export default ({ config }) => ({
       ],
       ["expo-notifications"],
       "expo-web-browser",
-      "expo-updates"
+      "expo-updates",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ]
     ],
     experiments: {
       typedRoutes: true,

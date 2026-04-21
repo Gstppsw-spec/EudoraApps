@@ -11,6 +11,25 @@ export default function RootLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="withdraw"
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="bank_account"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="add_bank_account"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

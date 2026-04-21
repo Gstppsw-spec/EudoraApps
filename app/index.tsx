@@ -16,6 +16,7 @@ export default function Index() {
       await new Promise((r) => setTimeout(r, 500));
       if (customerId && hasPin && customerDetails?.token) {
         router.replace("/authentication/verifyPin");
+        // router.replace('/payment/paymentTest')
       } else if (customerId && !hasPin) {
         router.replace("/tabs/home");
       } else {

@@ -1,11 +1,16 @@
 import useStore from "@/store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -18,12 +23,17 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
+import ErrorView from "../component/errorView";
 import HeaderWithBack from "../component/headerWithBack";
+import LoadingView from "../component/loadingView";
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
-const fetchTreatmentFreeClaim = async () => {
-  const res = await fetch(`${apiUrl}/getListTreatmentClaimFreeActive`);
+const fetchTreatmentFreeClaim = async ({ queryKey }: any) => {
+  const [, customerId] = queryKey;
+  const res = await fetch(
+    `${apiUrl}/getListTreatmentClaimFreeActive?customerId=${customerId}`
+  );
   if (!res.ok) throw new Error("Network error");
   return res.json();
 };
@@ -52,10 +62,26 @@ const AboutScreen = () => {
   const { t } = useTranslation();
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const customerDetails = useStore((state) => state.customerDetails);
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["50%", "90%"], []);
+  const [qty, setQty] = useState();
+  const [note, setNote] = useState();
+  const [treatmentid, setTreatmentId] = useState();
+  const [treatmenName, setTreatmentName] = useState();
+  const [description, setDescription] = useState();
+
+  const handleShowModal = useCallback(() => {
+    bottomSheetModalRef.current?.present();
+  }, []);
+
+  const handleCloseModal = () => {
+    bottomSheetModalRef.current?.dismiss();
+  };
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ["getListTreatmentClaimFreeActive"],
+    queryKey: ["getListTreatmentClaimFreeActive", customerId],
     queryFn: fetchTreatmentFreeClaim,
+    enabled: !!customerId,
   });
 
   const {
@@ -82,6 +108,7 @@ const AboutScreen = () => {
         });
         refetch();
         refetchIsclaim();
+        handleCloseModal();
       } else {
         Toast.show({
           type: "error",
@@ -89,6 +116,7 @@ const AboutScreen = () => {
           position: "top",
           visibilityTime: 2000,
         });
+        handleCloseModal();
       }
     },
     onError: (error) => {
@@ -98,10 +126,11 @@ const AboutScreen = () => {
         position: "top",
         visibilityTime: 2000,
       });
+      handleCloseModal();
     },
   });
 
-  const handleBooking = ({ qty, treatmentid, note }: any) => {
+  const handleClaimTreatment = () => {
     if (qty && treatmentid && note) {
       mutation.mutate({
         qty: qty,
@@ -123,9 +152,7 @@ const AboutScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <HeaderWithBack title="Claim Treatment" useGoBack />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007bff" />
-        </View>
+        <LoadingView />
       </SafeAreaView>
     );
   }
@@ -134,9 +161,7 @@ const AboutScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <HeaderWithBack title="Claim Treatment" useGoBack />
-        <View style={styles.center}>
-          <Text style={{ color: "red" }}>Gagal memuat data</Text>
-        </View>
+        <ErrorView onRetry={onRefresh} />
       </SafeAreaView>
     );
   }
@@ -145,28 +170,24 @@ const AboutScreen = () => {
     <View style={styles.card}>
       <View style={{ flex: 1 }}>
         <Text style={styles.treatmentName}>{item.treatmentname}</Text>
-        <Text style={styles.qty}>Qty: {item.qty} </Text>
       </View>
       <TouchableOpacity
-        disabled={mutation.isPending}
-        onPress={() =>
-          handleBooking({
-            qty: item.qty,
-            treatmentid: item.treatmentid,
-            note: item.note,
-          })
-        }
+        onPress={() => {
+          handleShowModal();
+          setNote(item.note);
+          setQty(item.qty);
+          setTreatmentId(item.treatmentid);
+          setTreatmentName(item.treatmentname);
+          setDescription(item.description);
+        }}
       >
         <LinearGradient
           colors={["#ff7eb3", "#ff758c"]}
           style={styles.claimButton}
         >
           <Ionicons name="gift-outline" size={18} color="#fff" />
-          {mutation.isPending ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.claimText}>Claim</Text>
-          )}
+
+          <Text style={styles.claimText}>Claim</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -225,6 +246,7 @@ const AboutScreen = () => {
           <FlatList
             data={data?.listTreatment || []}
             keyExtractor={(item) => item.id.toString()}
+            showsVerticalScrollIndicator={false}
             renderItem={renderItem}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
@@ -232,6 +254,48 @@ const AboutScreen = () => {
           />
         </>
       )}
+
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+            pressBehavior="close"
+          />
+        )}
+      >
+        <BottomSheetView style={styles.modalContentSheet}>
+          <Text style={styles.modalTitleSheet}>{treatmenName}</Text>
+          <Text style={styles.modalMessage}>{description}</Text>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButtonSheet, { backgroundColor: "#eee" }]}
+              onPress={handleCloseModal}
+            >
+              <Text style={styles.modalButtonText}>{t("cancel")}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              disabled={mutation.isPending}
+              style={[styles.modalButtonSheet, { backgroundColor: "#e53935" }]}
+              onPress={handleClaimTreatment}
+            >
+              {mutation.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={[styles.modalButtonText, { color: "white" }]}>
+                  {t("confirm")}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </BottomSheetView>
+      </BottomSheetModal>
     </SafeAreaView>
   );
 };
@@ -250,9 +314,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   cardText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "500",
     color: "#333",
+    textAlign: "justify",
   },
 
   checkButton: {
@@ -305,7 +370,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   treatmentName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
     color: "#333",
     marginBottom: 10,
@@ -344,6 +409,37 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  modalContentSheet: {
+    padding: 20,
+    backgroundColor: "white",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  modalTitleSheet: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalMessage: {
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: "justify",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalButtonSheet: {
+    flex: 1,
+    padding: 12,
+    marginHorizontal: 5,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
   },
 });
 

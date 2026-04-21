@@ -18,6 +18,13 @@ export default function RootLayout() {
           headerShown: false,
         }}
       />
+
+       <Stack.Screen
+        name="paymentTest"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

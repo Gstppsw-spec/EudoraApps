@@ -1,7 +1,7 @@
 import useStore from "@/store/useStore";
-import { FontAwesome } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -31,19 +31,22 @@ const getCategory = async ({ queryKey }: any) => {
   return res.json();
 };
 
-const CategoryCard = ({ category }: any) => {
-  return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/category/${category.id}`)}
-    >
-      <View style={styles.iconContainer}>
-        <FontAwesome name={category.icon} size={30} color="#B0174C" />
-      </View>
-      <Text style={styles.cardTitle}>{category.name}</Text>
-    </TouchableOpacity>
-  );
-};
+  const CategoryCard = ({ category }: any) => {
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push(`/category/${category.id}`)}
+      >
+        <View style={styles.iconContainer}>
+          <Image
+            source={{ uri: category.icon_image }}
+            style={{ width: 60, height: 60, resizeMode: "contain" }}
+          />
+        </View>
+        <Text style={styles.cardTitle}>{category.name}</Text>
+      </TouchableOpacity>
+    );
+  };
 
 const MoreScreen = () => {
   const [refreshing, setRefreshing] = useState(false);

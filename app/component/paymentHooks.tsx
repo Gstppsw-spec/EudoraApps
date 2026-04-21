@@ -14,7 +14,13 @@ export const useXenditPayment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ amount, location_id, customer_id, detail }) => {
+    mutationFn: async ({
+      amount,
+      location_id,
+      customer_id,
+      detail,
+      consultant_id,
+    }) => {
       const response = await axios.post(
         `${apiUrl}/api/payment/create_invoice`,
         {
@@ -22,6 +28,7 @@ export const useXenditPayment = () => {
           location_id,
           customer_id,
           detail,
+          consultant_id,
         },
         {
           headers: {
@@ -37,6 +44,7 @@ export const useXenditPayment = () => {
       Toast.show({ type: "info", text1: "Membuat invoice..." });
     },
     onSuccess: async (data) => {
+
       if (data.invoice_url) {
         const result = await WebBrowser.openBrowserAsync(data.invoice_url, {
           enableBarCollapsing: true,

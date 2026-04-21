@@ -21,7 +21,10 @@ import {
   View,
 } from "react-native";
 import { RefreshControl } from "react-native-gesture-handler";
+import EmptyView from "../component/emptyView";
+import ErrorView from "../component/errorView";
 import HeaderWithCart from "../component/headerWithCart";
+import LoadingView from "../component/loadingView";
 
 const { width } = Dimensions.get("window");
 const HORIZONTAL_PADDING = 16;
@@ -70,7 +73,7 @@ const ProductList = () => {
     { id: 3, name: "Product" },
   ];
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, refetch, isRefetching, error } = useQuery({
     queryKey: ["getListCategoryByProductByIdApps", categoryId],
     queryFn: fetchCategoryProduct,
     enabled: !!categoryId,
@@ -88,6 +91,7 @@ const ProductList = () => {
     isLoading: isLoadingcategory,
     refetch: refetchcategory,
     isRefetching: isRefetchingcategory,
+    error: errorCategory,
   } = useQuery({
     queryKey: ["getListCategoryApps", customerId, customerDetails?.token],
     queryFn: getCategory,
@@ -176,12 +180,39 @@ const ProductList = () => {
             <Text style={styles.name} numberOfLines={2}>
               {item.productname}
             </Text>
-            <Text style={styles.price}>{formatRupiah(item.price)}</Text>
+            {item.normal_price ? (
+              <>
+                <Text style={styles.priceNormal}>
+                  {formatRupiah(item.normal_price)}
+                </Text>
+                <Text style={styles.price}>{formatRupiah(item.price)}</Text>
+              </>
+            ) : (
+              <Text style={styles.price}>{formatRupiah(item.price)}</Text>
+            )}
           </View>
         </TouchableOpacity>
       </View>
     );
   };
+
+  if (isLoading || isLoadingcategory) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <HeaderWithCart title="Eudora Services" useGoBack />
+        <LoadingView />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || errorCategory) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <HeaderWithCart title="Eudora Services" useGoBack />
+        <ErrorView onRetry={onRefresh} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -225,20 +256,7 @@ const ProductList = () => {
           paddingHorizontal: HORIZONTAL_PADDING,
           paddingBottom: 20,
         }}
-        ListEmptyComponent={() => (
-          <View
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-              marginTop: 50,
-            }}
-          >
-            <Text style={{ fontSize: 16, color: "#999" }}>
-              Tidak ada data tersedia
-            </Text>
-          </View>
-        )}
+        ListEmptyComponent={() => <EmptyView />}
       />
 
       <BottomSheetModal
@@ -339,6 +357,12 @@ const styles = StyleSheet.create({
     flexDirection: "row", // tampilkan tombol secara horizontal
     justifyContent: "space-between", // jarak merata antar tombol
     marginVertical: 10,
+  },
+  priceNormal: {
+    fontSize: 12,
+    color: "#999",
+    textDecorationLine: "line-through",
+    marginRight: 8,
   },
   button: {
     flex: 1, // agar tombol menyesuaikan lebar

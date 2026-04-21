@@ -39,8 +39,6 @@ const HeaderWithCart = ({ title, backHref, useGoBack = false }: any) => {
     enabled: !!customerId,
   });
 
-  //   console.log(data);
-
   return (
     <View style={styles.header}>
       <StatusBar

@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     flex: 1,
     textAlign: "center",
-    marginRight: 30
+    marginRight: 30,
   },
 });
 

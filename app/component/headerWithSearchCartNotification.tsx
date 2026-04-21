@@ -8,6 +8,7 @@ import React from "react";
 import {
   Platform,
   Pressable,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -16,130 +17,140 @@ import {
 } from "react-native";
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
+const STATUS_BAR_HEIGHT =
+  Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 24;
 
-const fetchNotificationCustomerNotRead = async ({ queryKey }: any) => {
-  const [, customerId] = queryKey;
-  const res = await fetch(
-    `${apiUrl}/get_user_notification_not_read/${customerId}`
-  );
-  if (!res.ok) throw new Error("Network error");
-  return res.json();
-};
-
-const fetchCustomerCart = async ({ queryKey }: any) => {
-  const [, customerId] = queryKey;
-  const res = await fetch(`${apiUrl}/getCustomerCart/${customerId}`);
-  if (!res.ok) throw new Error("Network error");
-  return res.json();
-};
-
-export default function HeaderActions() {
+export default function HeaderActions({ scrollY }: { scrollY?: any }) {
   const router = useRouter();
   const customerId = useStore((state: { customerid: any }) => state.customerid);
 
-  const { data: notification, refetch: refetchNotification } = useQuery({
+  const { data: notification } = useQuery({
     queryKey: ["get_user_notification_not_read", customerId],
-    queryFn: fetchNotificationCustomerNotRead,
+    queryFn: async ({ queryKey }) => {
+      const [, id] = queryKey;
+      const res = await fetch(`${apiUrl}/get_user_notification_not_read/${id}`);
+      if (!res.ok) throw new Error("Network error");
+      return res.json();
+    },
     enabled: !!customerId,
   });
-  
-  const { data, isLoading, refetch } = useQuery({
+
+  const { data: cart } = useQuery({
     queryKey: ["getCustomerCart", customerId],
-    queryFn: fetchCustomerCart,
+    queryFn: async ({ queryKey }) => {
+      const [, id] = queryKey;
+      const res = await fetch(`${apiUrl}/getCustomerCart/${id}`);
+      if (!res.ok) throw new Error("Network error");
+      return res.json();
+    },
     enabled: !!customerId,
   });
 
   return (
-    <View
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        position: "absolute",
-        top: 10,
-        alignItems: "center",
-        width: "100%",
-      }}
-    >
-      <BlurView intensity={30} tint="dark" style={styles.searchContainer}>
-        <FontAwesome name="search" size={15} color="#fff" style={styles.icon} />
+    <BlurView intensity={50} tint="dark" style={styles.headerContainer}>
+      <View style={styles.searchWrapper}>
+        <FontAwesome
+          name="search"
+          size={16}
+          color="#fff"
+          style={{ marginRight: 8 }}
+        />
         <TextInput
-          placeholder="Search"
-          placeholderTextColor="white"
+          placeholder="Search products"
+          placeholderTextColor="rgba(255,255,255,0.7)"
           style={styles.input}
         />
         <TouchableOpacity>
-          <FontAwesome name="filter" size={15} color="#fff" />
+          <FontAwesome name="filter" size={16} color="#fff" />
         </TouchableOpacity>
-      </BlurView>
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
+      </View>
+
+      <View style={styles.iconsWrapper}>
         <Pressable
           style={styles.iconButton}
           onPress={() => router.push("/notification")}
         >
-          <FontAwesome name="bell" size={15} color="white" />
+          <FontAwesome name="bell" size={20} color="#fff" />
           {notification?.count > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{notification?.count}</Text>
+              <Text style={styles.badgeText}>{notification.count}</Text>
             </View>
           )}
         </Pressable>
+
         <Pressable
-          style={[styles.iconButton, { marginLeft: 8 }]}
+          style={[styles.iconButton, { marginLeft: 12 }]}
           onPress={() => router.push("/cart")}
         >
-          <FontAwesome name="shopping-cart" size={15} color="white" />
-          {data?.count > 0 && (
+          <FontAwesome name="shopping-cart" size={20} color="#fff" />
+          {cart?.count > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{data?.count}</Text>
+              <Text style={styles.badgeText}>{cart.count}</Text>
             </View>
           )}
         </Pressable>
+
+        <Pressable
+          style={[styles.iconButton, { marginLeft: 12 }]}
+          onPress={() => router.push("/account")}
+        >
+          <FontAwesome name="user-circle" size={20} color="#fff" />
+        </Pressable>
       </View>
-    </View>
+    </BlurView>
   );
 }
 
 const styles = StyleSheet.create({
-  searchContainer: {
+  headerContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    zIndex: 999,
+    backgroundColor: "rgba(0,0,0,0.4)", // fallback blur
+  },
+  searchWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    borderColor: "rgba(255,255,255,0.15)",
-    width: "70%",
-    paddingHorizontal: 13,
-    paddingVertical: Platform.OS === "ios" ? 12 : 0,
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 12,
-    borderWidth: 1,
-    gap: 2,
-    marginLeft: 10,
-    alignSelf: "center",
-    overflow: "hidden",
-  },
-  icon: {
-    marginRight: 2,
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "ios" ? 10 : 6,
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    color: "white",
+    color: "#fff",
     fontSize: 14,
-    letterSpacing: 4,
+    letterSpacing: 1,
+  },
+  iconsWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   iconButton: {
-    borderColor: "#272835",
-    borderWidth: 0.1,
+    width: 38,
+    height: 38,
     borderRadius: 100,
-    padding: 14,
-    backgroundColor: "#272835",
-    marginRight: 3,
-    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
   },
   badge: {
     position: "absolute",
-    right: 1,
-    top: 2,
-    backgroundColor: "red",
-    borderRadius: 10,
+    top: 0,
+    right: 0,
+    backgroundColor: "#FF3B30",
+    borderRadius: 8,
     minWidth: 16,
     height: 16,
     justifyContent: "center",
@@ -147,8 +158,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   badgeText: {
-    color: "white",
+    color: "#fff",
     fontSize: 10,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
 });

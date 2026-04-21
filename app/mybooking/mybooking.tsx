@@ -65,7 +65,7 @@ const MyBookingUpcoming = () => {
   const [switchStates, setSwitchStates] = useState<boolean[]>([]);
   const [isEnabled, setIsEnabled] = useState(false);
   const [mode, setMode] = useState<"upcoming" | "completed" | "canceled">(
-    "upcoming"
+    "upcoming",
   );
   const { addReminder, removeReminder } = useStore();
 
@@ -143,7 +143,7 @@ const MyBookingUpcoming = () => {
     if (!data?.customerbooking) return;
     const { isReminderActive } = useStore.getState();
     const newSwitchStates = data.customerbooking.map((booking) =>
-      isReminderActive(booking.BOOKINGID)
+      isReminderActive(booking.BOOKINGID),
     );
     setSwitchStates(newSwitchStates);
   }, [data]);
@@ -167,10 +167,10 @@ const MyBookingUpcoming = () => {
         booking.TREATMENTDATE.replace(" ", "T").split("T")[0] +
           "T" +
           booking.TIME +
-          ":00"
+          ":00",
       );
       const twoHoursBefore = new Date(
-        bookingDateTime.getTime() - 2 * 60 * 60 * 1000
+        bookingDateTime.getTime() - 2 * 60 * 60 * 1000,
       );
 
       const now = new Date();
@@ -291,7 +291,7 @@ const MyBookingUpcoming = () => {
             ) : data?.customerbooking?.length > 0 ? (
               data.customerbooking.map((booking: any, index: number) => {
                 const formattedDate = new Date(
-                  booking.TREATMENTDATE.replace(" ", "T")
+                  booking.TREATMENTDATE.replace(" ", "T"),
                 ).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "long",
@@ -394,7 +394,7 @@ const MyBookingUpcoming = () => {
               dataCompleted.customerbooking.map(
                 (booking: any, index: number) => {
                   const formattedDate = new Date(
-                    booking.TREATMENTDATE.replace(" ", "T")
+                    booking.TREATMENTDATE.replace(" ", "T"),
                   ).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
@@ -448,7 +448,7 @@ const MyBookingUpcoming = () => {
                       </View>
                     </View>
                   );
-                }
+                },
               )
             ) : (
               <View style={styles.emptyContainer}>
@@ -477,7 +477,7 @@ const MyBookingUpcoming = () => {
               dataCanceled.customerbooking.map(
                 (booking: any, index: number) => {
                   const formattedDate = new Date(
-                    booking.TREATMENTDATE.replace(" ", "T")
+                    booking.TREATMENTDATE.replace(" ", "T"),
                   ).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
@@ -531,7 +531,7 @@ const MyBookingUpcoming = () => {
                       </View>
                     </View>
                   );
-                }
+                },
               )
             ) : (
               <View style={styles.emptyContainer}>

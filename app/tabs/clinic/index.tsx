@@ -30,6 +30,8 @@ const fetchListClinic = async () => {
 
 const IndexScreen: React.FC = () => {
   const setLocationId = useStore((state) => state.setLocationId);
+  const setLocationName = useStore((state) => state.setLocationName);
+
   const [refreshing, setRefreshing] = useState(false);
   const {
     data: dataclinic,
@@ -69,7 +71,10 @@ const IndexScreen: React.FC = () => {
     <View key={index} style={styles.clinicCardContainer}>
       <Link
         href={{ pathname: "/tabs/clinic/details", params: item }}
-        onPress={() => setLocationId(item.id)}
+        onPress={() => {
+          setLocationId(item.id);
+          setLocationName(item.name);
+        }}
         asChild
       >
         <TouchableOpacity style={styles.clinicCard}>

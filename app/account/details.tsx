@@ -1,4 +1,5 @@
 import HeaderWithBack from "@/app/component/headerWithBack";
+import useStore from "@/store/useStore";
 import { FontAwesome5 } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
@@ -16,7 +17,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import useStore from "../../../store/useStore";
 
 const PersonalDataScreen = () => {
   const customerDetails = useStore((state) => state.customerDetails);
@@ -26,7 +26,6 @@ const PersonalDataScreen = () => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const { t } = useTranslation();
 
-  
   const handlePickOption = () => {
     Alert.alert("Pilih Foto", "Ambil dari kamera atau galeri?", [
       { text: "Kamera", onPress: openCamera },
@@ -40,7 +39,7 @@ const PersonalDataScreen = () => {
     if (status !== "granted") return;
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       base64: true, // ✅ ini penting!
       quality: 0.7,
     });
@@ -64,7 +63,7 @@ const PersonalDataScreen = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       base64: true,
       quality: 0.7,
     });
@@ -86,10 +85,8 @@ const PersonalDataScreen = () => {
   };
   return (
     <SafeAreaView style={styles.container}>
-      <HeaderWithBack title="Personal Data" backHref="/tabs/account" />
+      <HeaderWithBack title="Personal Data" useGoBack />
       <ScrollView style={styles.content}>
-        {/* Avatar Section */}
-
         <TouchableOpacity
           onPress={handlePickOption}
           style={styles.avatarContainer}
@@ -247,7 +244,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     alignItems: "center",
-    marginTop: 10
+    marginTop: 10,
   },
   avatar: {
     width: 120,

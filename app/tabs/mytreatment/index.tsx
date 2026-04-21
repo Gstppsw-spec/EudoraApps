@@ -1,6 +1,10 @@
+import {
+  usePrepaidBalanceInvoicePackages,
+  usePrepaidBalanceInvoiceTreatment,
+} from "@/api/prepaid_balance/queries";
+import ErrorView from "@/app/component/errorView";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import Constants from 'expo-constants';
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   RefreshControl,
@@ -10,36 +14,9 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import useStore from "../../../store/useStore";
-
-
-const apiUrl = Constants.expoConfig?.extra?.apiUrl
-
-
-const fetchListTreatments = async ({queryKey}: any) => {
-  const [, customerId] = queryKey;
-  const response = await fetch(
-    `${apiUrl}/getDetailTransactionTreatment/${customerId}`
-  );
-  if (!response.ok) {
-    throw new Error("Network error: " + response.statusText);
-  }
-  return response.json();
-};
-
-const fetchListPackages = async ({queryKey}: any) => {
-  const [, customerId] = queryKey;
-  const response = await fetch(
-    `${apiUrl}/getDetailTransactionMembership/${customerId}`
-  );
-  if (!response.ok) {
-    throw new Error("Network error: " + response.statusText);
-  }
-  return response.json();
-};
-
 
 const YourTreatmentAndPackageScreen = () => {
   const [selectedTab, setSelectedTab] = useState("treatments");
@@ -50,25 +27,15 @@ const YourTreatmentAndPackageScreen = () => {
     isLoading: isLoadingTreatments,
     error: treatmentsError,
     refetch: refetchTreatments,
-  } = useQuery({
-    queryKey: ["treatments", customerId],
-    queryFn: fetchListTreatments,
-    enabled: !!customerId
-  });
+  } = usePrepaidBalanceInvoiceTreatment(customerId);
 
-  // Fetch packages
   const {
     data: packagesData,
     isLoading: isLoadingPackages,
     error: packagesError,
     refetch: refetchPackages,
-  } = useQuery({
-    queryKey: ["packages", customerId],
-    queryFn: fetchListPackages,
-    enabled: !!customerId
-  });
+  } = usePrepaidBalanceInvoicePackages(customerId);
 
-  // Handle refresh action
   const onRefresh = () => {
     refetchTreatments();
     refetchPackages();
@@ -77,6 +44,8 @@ const YourTreatmentAndPackageScreen = () => {
   // Extract data
   const treatments = treatmentsData?.treatment || [];
   const packages = packagesData?.membership || [];
+
+  // console.log(packages, "test");
 
   return (
     <SafeAreaView style={styles.container}>
@@ -147,28 +116,31 @@ const YourTreatmentAndPackageScreen = () => {
                 <Text style={styles.loadingText}>Loading Treatments...</Text>
               </View>
             ) : treatmentsError ? (
-              <View style={styles.errorContainer}>
-                <Ionicons name="warning" size={40} color="#FF6B6B" />
-                <Text style={styles.errorText}>Failed to load treatments</Text>
-                <Text style={styles.errorSubText}>
-                  {treatmentsError.message}
-                </Text>
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={refetchTreatments}
-                >
-                  <Text style={styles.retryButtonText}>Try Again</Text>
-                </TouchableOpacity>
-              </View>
+              <ErrorView onRetry={onRefresh} />
             ) : treatments.length > 0 ? (
-              treatments.map((treatment, index) => (
+              treatments.map((treatment: any, index: number) => (
                 <View style={styles.card} key={index}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.invoiceNumber}>
                       #{treatment.INVOICENO || "N/A"}
                     </Text>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>Active</Text>
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>Active</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.statusBadgeBook}
+                        onPress={() => router.push("/bookappointment/booking")}
+                      >
+                        <Text style={styles.statusTextBook}>Book</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                   <Text style={styles.treatmentName}>
@@ -244,26 +216,30 @@ const YourTreatmentAndPackageScreen = () => {
                 <Text style={styles.loadingText}>Loading Packages...</Text>
               </View>
             ) : packagesError ? (
-              <View style={styles.errorContainer}>
-                <Ionicons name="warning" size={40} color="#FF6B6B" />
-                <Text style={styles.errorText}>Failed to load packages</Text>
-                <Text style={styles.errorSubText}>{packagesError.message}</Text>
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={refetchPackages}
-                >
-                  <Text style={styles.retryButtonText}>Try Again</Text>
-                </TouchableOpacity>
-              </View>
+              <ErrorView onRetry={onRefresh} />
             ) : packages.length > 0 ? (
-              packages.map((packageItem, index) => (
+              packages.map((packageItem: any, index: number) => (
                 <View style={styles.card} key={index}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.invoiceNumber}>
                       #{packageItem.INVOICENO || "N/A"}
                     </Text>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>Active</Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>Active</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.statusBadgeBook}
+                        onPress={() => router.push("/bookappointment/booking")}
+                      >
+                        <Text style={styles.statusTextBook}>Book</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                   <Text style={styles.packageName}>
@@ -302,7 +278,7 @@ const YourTreatmentAndPackageScreen = () => {
                       <Text style={styles.detailText}>
                         {packageItem.INVOICEDATE
                           ? new Date(
-                              packageItem.INVOICEDATE
+                              packageItem.INVOICEDATE,
                             ).toLocaleDateString()
                           : "No Date"}
                       </Text>
@@ -340,7 +316,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF", // Pure white background
-    
   },
   backButton: {
     padding: 5,
@@ -381,9 +356,7 @@ const styles = StyleSheet.create({
     color: "#B0174C",
     fontWeight: "600",
   },
-  tabIndicator: {
-
-  },
+  tabIndicator: {},
   content: {
     flex: 1,
     paddingHorizontal: 16,
@@ -417,14 +390,30 @@ const styles = StyleSheet.create({
     backgroundColor: "#B0174C", // Light yellow background
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#FFE082",
+  },
+
+  statusBadgeBook: {
+    backgroundColor: "green", // Light yellow background
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "green",
   },
   statusText: {
     fontSize: 12,
     color: "#FFA000", // Darker yellow
     fontWeight: "500",
+    marginHorizontal: 10,
+  },
+  statusTextBook: {
+    fontSize: 12,
+    color: "white", // Darker yellow
+    fontWeight: "500",
+    marginHorizontal: 10,
   },
   treatmentName: {
     fontSize: 18,

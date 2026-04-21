@@ -2,6 +2,7 @@ import useStore from "@/store/useStore";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   FlatList,
@@ -12,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Toast from "react-native-toast-message";
 import HeaderWithBack from "../component/headerWithBack";
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
@@ -22,6 +22,8 @@ type HistoryItem = {
   description: string;
   amount: number;
   date: string;
+  customername: string;
+  status: string;
 };
 
 const getCustomerSaldo = async ({ queryKey }: any) => {
@@ -105,13 +107,7 @@ export default function SaldoScreen() {
     "Rp " + number?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
   const handleTarikSaldo = () => {
-    Toast.show({
-      type: "info",
-      text1: "Fitur Belum Tersedia",
-      text2: "Fitur penarikan saldo akan tersedia mulai 15 September 2025.",
-      position: "top",
-      visibilityTime: 3000,
-    });
+    router.push("/saldo/bank_account")
   };
 
   const onRefresh = async () => {
@@ -121,7 +117,6 @@ export default function SaldoScreen() {
     } catch (error) {
       console.log("Error refreshing:", error);
     }
-
     setRefreshing(false);
   };
 

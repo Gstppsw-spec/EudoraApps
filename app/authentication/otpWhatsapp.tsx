@@ -59,6 +59,7 @@ export default function Login() {
   const lang = useStore((state) => state.lang);
   const setLang = useStore((state) => state.setLang);
   const setCustomerDetails = useStore((state) => state.setCustomerDetails);
+  const setJwtToken = useStore((state) => state.setJwtToken);
 
   const [countryCode, setCountryCode] = useState<Country>({
     callingCode: ["62"],
@@ -115,7 +116,7 @@ export default function Login() {
     if (!isValidPhoneNumber(phone)) {
       Alert.alert(
         "Error",
-        "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan."
+        "Format nomor telepon tidak valid. Harap masukkan nomor tanpa kode negara dan tanpa angka 0 di depan.",
       );
       return;
     }
@@ -129,6 +130,7 @@ export default function Login() {
     mutationFn: verifyOtpUser,
     onSuccess: (data) => {
       if (data.status) {
+        setJwtToken(data.jwt_token);
         setCustomerId(data.customerId);
         setHasPin(data.has_pin);
         setCustomerDetails({

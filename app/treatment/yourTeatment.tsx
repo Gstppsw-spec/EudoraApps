@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   RefreshControl,
@@ -10,15 +11,15 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import useStore from "../../store/useStore";
+import ErrorView from "../component/errorView";
 import HeaderWithBack from "../component/headerWithBack";
 
-const apiUrl = Constants.expoConfig?.extra?.apiUrl || Constants.manifest?.extra?.apiUrl;
+const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
-
-const fetchListTreatments = async ({queryKey}: any) => {
+const fetchListTreatments = async ({ queryKey }: any) => {
   const [, customerId] = queryKey;
   const response = await fetch(
     `${apiUrl}/getDetailTransactionTreatment/${customerId}`
@@ -29,7 +30,7 @@ const fetchListTreatments = async ({queryKey}: any) => {
   return response.json();
 };
 
-const fetchListPackages = async ({queryKey}: any) => {
+const fetchListPackages = async ({ queryKey }: any) => {
   const [, customerId] = queryKey;
   const response = await fetch(
     `${apiUrl}/getDetailTransactionMembership/${customerId}`
@@ -52,7 +53,7 @@ const YourTreatmentAndPackageScreen = () => {
   } = useQuery({
     queryKey: ["treatments", customerId],
     queryFn: fetchListTreatments,
-    enabled: !!customerId
+    enabled: !!customerId,
   });
 
   // Fetch packages
@@ -64,7 +65,7 @@ const YourTreatmentAndPackageScreen = () => {
   } = useQuery({
     queryKey: ["packages", customerId],
     queryFn: fetchListPackages,
-    enabled: !!customerId
+    enabled: !!customerId,
   });
 
   // Handle refresh action
@@ -79,10 +80,9 @@ const YourTreatmentAndPackageScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      
       <HeaderWithBack
         title="My Treatments & Packages"
-        backHref="/tabs/account"
+        backHref="/account"
       />
       <StatusBar
         translucent
@@ -152,28 +152,30 @@ const YourTreatmentAndPackageScreen = () => {
                 <Text style={styles.loadingText}>Loading Treatments...</Text>
               </View>
             ) : treatmentsError ? (
-              <View style={styles.errorContainer}>
-                <Ionicons name="warning" size={40} color="#FF6B6B" />
-                <Text style={styles.errorText}>Failed to load treatments</Text>
-                <Text style={styles.errorSubText}>
-                  {treatmentsError.message}
-                </Text>
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={refetchTreatments}
-                >
-                  <Text style={styles.retryButtonText}>Try Again</Text>
-                </TouchableOpacity>
-              </View>
+              <ErrorView onRetry={onRefresh} />
             ) : treatments.length > 0 ? (
-              treatments.map((treatment, index) => (
+              treatments.map((treatment: any, index: any) => (
                 <View style={styles.card} key={index}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.invoiceNumber}>
                       #{treatment.INVOICENO || "N/A"}
                     </Text>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>Active</Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>Active</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.statusBadgeBook}
+                        onPress={() => router.push("/bookappointment/booking")}
+                      >
+                        <Text style={styles.statusTextBook}>Book</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                   <Text style={styles.treatmentName}>
@@ -249,26 +251,30 @@ const YourTreatmentAndPackageScreen = () => {
                 <Text style={styles.loadingText}>Loading Packages...</Text>
               </View>
             ) : packagesError ? (
-              <View style={styles.errorContainer}>
-                <Ionicons name="warning" size={40} color="#FF6B6B" />
-                <Text style={styles.errorText}>Failed to load packages</Text>
-                <Text style={styles.errorSubText}>{packagesError.message}</Text>
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={refetchPackages}
-                >
-                  <Text style={styles.retryButtonText}>Try Again</Text>
-                </TouchableOpacity>
-              </View>
+              <ErrorView onRetry={onRefresh} />
             ) : packages.length > 0 ? (
-              packages.map((packageItem, index) => (
+              packages.map((packageItem: any, index: number) => (
                 <View style={styles.card} key={index}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.invoiceNumber}>
                       #{packageItem.INVOICENO || "N/A"}
                     </Text>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>Active</Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>Active</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.statusBadgeBook}
+                        onPress={() => router.push("/bookappointment/booking")}
+                      >
+                        <Text style={styles.statusTextBook}>Book</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                   <Text style={styles.packageName}>
@@ -382,9 +388,7 @@ const styles = StyleSheet.create({
     color: "#B0174C", // Yellow for active tab
     fontWeight: "600",
   },
-  tabIndicator: {
-
-  },
+  tabIndicator: {},
   content: {
     flex: 1,
     paddingHorizontal: 16,
@@ -415,10 +419,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   statusBadge: {
-    backgroundColor: "#FFE5F8", // Light yellow background
+    backgroundColor: "#B0174C", // Light yellow background
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#FFE082",
   },
@@ -426,6 +430,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#FFA000", // Darker yellow
     fontWeight: "500",
+    marginHorizontal: 10,
   },
   treatmentName: {
     fontSize: 18,
@@ -557,6 +562,21 @@ const styles = StyleSheet.create({
   activeTab: {
     borderBottomWidth: 2,
     borderBottomColor: "#FFB900",
+  },
+  statusTextBook: {
+    fontSize: 12,
+    color: "white",
+    fontWeight: "500",
+    marginHorizontal: 10,
+  },
+
+  statusBadgeBook: {
+    backgroundColor: "green",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "green",
   },
 });
 

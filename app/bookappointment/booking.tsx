@@ -1,15 +1,16 @@
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BottomSheetFlatList, BottomSheetModal } from "@gorhom/bottom-sheet";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
-  SafeAreaView,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,21 +19,25 @@ import {
   View,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import HeaderWithBack from "../../app/component/headerWithBack";
 import useStore from "../../store/useStore";
+import ErrorView from "../component/errorView";
+import LoadingView from "../component/loadingView";
+import useClinicDistances from "../hooks/useDistanceToClinic";
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 const postData = async (formData: any) => {
   const response = await axios.post(
-    `${apiUrl}/insertBookingByCustomerDev`,
+    `${apiUrl}/insertBookingByCustomer`,
     formData,
     {
       headers: {
         "Content-Type": "application/json",
       },
-    }
+    },
   );
   return response.data;
 };
@@ -40,7 +45,7 @@ const postData = async (formData: any) => {
 const fetchAvailableTime = async ({ queryKey }: any) => {
   const [, date, locationId, duration] = queryKey;
   const res = await fetch(
-    `${apiUrl}/getTimeAvailableDuration/${date}/${locationId}/${duration}`
+    `${apiUrl}/getTimeAvailableDuration/${date}/${locationId}/${duration}`,
   );
   if (!res.ok) throw new Error("Network error");
   return res.json();
@@ -59,6 +64,12 @@ type Treatment = {
   qty: number;
 };
 
+const fetchListClinic = async () => {
+  const res = await fetch(`${apiUrl}/getClinic`);
+  if (!res.ok) throw new Error("Network response was not ok");
+  return res.json();
+};
+
 type SelectedTreatment = Treatment & { qtyorder: number };
 
 const BookingAppointmentScreen = () => {
@@ -66,17 +77,32 @@ const BookingAppointmentScreen = () => {
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false); // State for modal visibility
   const locationId = useStore((state: { locationId: any }) => state.locationId);
+  const locationName = useStore(
+    (state: { locationName: any }) => state.locationName,
+  );
+
+  const setLocationId = useStore((state) => state.setLocationId);
+  const setLocationName = useStore((state) => state.setLocationName);
+
   const customerId = useStore((state: { customerid: any }) => state.customerid);
-  const [remarks, setRemarks] = useState(null);
   const router = useRouter();
   const [showTreatmentModal, setShowTreatmentModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [duration, setDuration] = useState(0);
   const [selected, setSelected] = useState<SelectedTreatment[]>([]);
-  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+
+  const handlePresentBottomSheet = () => {
+    bottomSheetModalRef.current?.present();
+  };
+
+  const handleDismissBottomSheet = () => {
+    bottomSheetModalRef.current?.dismiss();
+  };
 
   const toggleSelect = (treatment: Treatment) => {
     setSelected((prev) => {
@@ -86,7 +112,7 @@ const BookingAppointmentScreen = () => {
         return prev.map((s) =>
           s.id === treatment.id
             ? { ...s, qtyorder: Math.min(s.qtyorder + 1, treatment.qty) }
-            : s
+            : s,
         );
       } else {
         return [...prev, { ...treatment, qtyorder: 1 }];
@@ -102,14 +128,14 @@ const BookingAppointmentScreen = () => {
           return { ...s, qtyorder: newQty };
         }
         return s;
-      })
+      }),
     );
   };
 
   const calculateDuration = (items: (Treatment & { qtyorder: number })[]) => {
     return items.reduce(
       (total, item) => total + item.duration * item.qtyorder,
-      0
+      0,
     );
   };
 
@@ -133,6 +159,29 @@ const BookingAppointmentScreen = () => {
     enabled: !!customerId,
   });
 
+  const { data: clinicOptions } = useQuery({
+    queryKey: ["getClinicTransactions"],
+    queryFn: fetchListClinic,
+  });
+
+  const filteredClinics = clinicOptions?.clinicEuodora?.filter((clinic: any) =>
+    clinic?.name?.toLowerCase().includes(debouncedQuery.toLowerCase()),
+  );
+
+  const { distances, loading: loadingDistance } = useClinicDistances(
+    clinicOptions?.clinicEuodora,
+  );
+
+  const sortedClinics = (filteredClinics || [])
+    .map((clinic: any) => {
+      const distance = distances?.[clinic.id];
+      return {
+        ...clinic,
+        distance: distance ?? Infinity,
+      };
+    })
+    .sort((a: any, b: any) => a.distance - b.distance);
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -140,8 +189,8 @@ const BookingAppointmentScreen = () => {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  const filteredServices = serviceOptions?.serviceList?.filter((clinic) =>
-    clinic?.name?.toLowerCase().includes(debouncedQuery.toLowerCase())
+  const filteredServices = serviceOptions?.serviceList?.filter((clinic: any) =>
+    clinic?.name?.toLowerCase().includes(debouncedQuery.toLowerCase()),
   );
 
   const {
@@ -154,14 +203,13 @@ const BookingAppointmentScreen = () => {
     enabled: !!selectedDate && !!locationId && !!duration,
   });
 
-
   const mutation = useMutation({
     mutationFn: postData,
     onSuccess: (data) => {
       if (data?.status) {
         Toast.show({
           type: "success",
-          text2: "Appointment berhasil dibuat!",
+          text2: data?.message,
           position: "top",
           visibilityTime: 2000,
         });
@@ -171,7 +219,7 @@ const BookingAppointmentScreen = () => {
       } else {
         Toast.show({
           type: "error",
-          text2: "Appointment gagal dibuat!",
+          text2: data?.message,
           position: "top",
           visibilityTime: 2000,
         });
@@ -228,16 +276,83 @@ const BookingAppointmentScreen = () => {
     });
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+
+    try {
+      await Promise.all([refetch()]);
+    } catch (error) {
+      console.log("Error refreshing:", error);
+    }
+    setRefreshing(false);
+  };
+
+  const renderItemLocation = ({ item }: any) => {
+    const distance = distances?.[item.id];
+    const formattedDistance = loadingDistance
+      ? "Menghitung..."
+      : distance !== undefined
+        ? `${distance.toFixed(2)} KM`
+        : "? KM";
+
+    const isSelected = locationId === item.id;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.clinicCard,
+          isSelected && { borderColor: "#B0174C", borderWidth: 1 },
+        ]}
+        onPress={() => {
+          setLocationId(item.id);
+          setLocationName(item.name);
+          handleDismissBottomSheet();
+        }}
+      >
+        <Ionicons
+          name="business-outline"
+          size={22}
+          color="#B0174C"
+          style={{ marginRight: 10 }}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.clinicNameText}>{item?.name}</Text>
+          <Text style={styles.clinicDistanceText}>
+            Jarak: {formattedDistance}
+          </Text>
+        </View>
+        {isSelected && (
+          <Ionicons name="checkmark-circle" size={22} color="#B0174C" />
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <HeaderWithBack
-        title="Book Appointment"
-        backHref="/tabs/clinic/details"
-      />
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+      <HeaderWithBack title="Book Appointment" useGoBack />
+
+      <View style={styles.inputGroup}>
+        <Pressable
+          style={styles.dropdownContainer}
+          onPress={() => {
+            handlePresentBottomSheet();
+          }}
+        >
+          <Text style={styles.text}>
+            {locationName || "Pilih Klinik Pembelian"}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#64748b" />
+        </Pressable>
+      </View>
+
       <ScrollView
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         style={{ padding: 10 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <Calendar
           onDayPress={(day) => setSelectedDate(day.dateString)}
@@ -276,14 +391,24 @@ const BookingAppointmentScreen = () => {
             style={styles.input}
             onPress={() => setShowTreatmentModal(true)}
           >
-            <Text style={styles.inputText}>Select Treatment</Text>
+            <Text style={styles.inputText}>Pilih Treatment</Text>
             <Ionicons name="chevron-down" size={20} color="#666" />
           </Pressable>
 
           {selected.length > 0 && (
             <View style={styles.selectedList}>
               {selected.map((item) => (
-                <View key={item.id} style={styles.selectedItem}>
+                <View
+                  key={item.id}
+                  style={[
+                    styles.selectedItem,
+                    {
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#eee",
+                      marginBottom: 5,
+                    },
+                  ]}
+                >
                   <Text style={styles.selectedText}>
                     {item.name} (x{item.qtyorder})
                   </Text>
@@ -305,18 +430,28 @@ const BookingAppointmentScreen = () => {
         </View>
 
         <View style={styles.timeContainer}>
-          {duration === null ? (
-            <Text style={[styles.timeText, styles.chooseTreatmentText]}>
-              Silahkan pilih treatment untuk melihat ketersediaan waktu
-            </Text>
+          {duration === 0 ? (
+            <View style={styles.infoCard}>
+              <Ionicons name="medkit-outline" size={40} color="#4ECDC4" />
+              <Text style={styles.infoTitle}>Silahkan pilih treatment</Text>
+              <Text style={styles.infoSubtitle}>
+                Untuk melihat ketersediaan waktu
+              </Text>
+            </View>
           ) : isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="large" />
+            <View style={styles.infoCard}>
+              <ActivityIndicator size="large" color="#4ECDC4" />
+              <Text style={styles.infoTitle}>Memuat data...</Text>
+              <Text style={styles.infoSubtitle}>Mohon tunggu sebentar</Text>
             </View>
           ) : error ? (
-            <Text style={[styles.timeText, styles.chooseTreatmentText]}>
-              Terjadi kesalahan saat mengambil data
-            </Text>
+            <View style={styles.infoCard}>
+              <Ionicons name="alert-circle-outline" size={40} color="#FF6B6B" />
+              <Text style={styles.infoTitle}>Terjadi kesalahan</Text>
+              <Text style={styles.infoSubtitle}>
+                Gagal mengambil data, coba lagi
+              </Text>
+            </View>
           ) : availableTime?.availableTimeEmployee?.length > 0 ? (
             availableTime.availableTimeEmployee.map(
               (time: any, index: number) => (
@@ -340,12 +475,16 @@ const BookingAppointmentScreen = () => {
                     {time.TIME}
                   </Text>
                 </TouchableOpacity>
-              )
+              ),
             )
           ) : (
-            <Text style={[styles.timeText, styles.chooseTreatmentText]}>
-              Tidak ada waktu tersedia
-            </Text>
+            <View style={styles.infoCard}>
+              <Ionicons name="time-outline" size={40} color="#FF6B6B" />
+              <Text style={styles.infoTitle}>Tidak ada waktu tersedia</Text>
+              <Text style={styles.infoSubtitle}>
+                Silakan pilih hari lain atau treatment berbeda
+              </Text>
+            </View>
           )}
         </View>
 
@@ -357,7 +496,6 @@ const BookingAppointmentScreen = () => {
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              {/* <Text style={styles.headerText}>Pilih Treatment</Text> */}
               <View style={styles.searchContainer}>
                 <FontAwesome
                   name="search"
@@ -367,33 +505,54 @@ const BookingAppointmentScreen = () => {
                 />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="SEARCH TREATMENT"
+                  placeholder="Search Treatment"
                   onChangeText={(text) => setSearchQuery(text)}
                   value={searchQuery}
                   placeholderTextColor="#999"
                 />
               </View>
-              <FlatList
-                data={filteredServices}
-                keyExtractor={(item) => item?.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => {
-                      setShowTreatmentModal(false);
-                      toggleSelect(item);
-                    }}
-                  >
-                    <Text>
-                      {item?.name} - {item?.duration} Menit ({item?.qty})
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                initialNumToRender={5}
-                maxToRenderPerBatch={5}
-                windowSize={5}
-                keyboardShouldPersistTaps="handled"
-              />
+              {isLoadingService ? (
+                <LoadingView />
+              ) : errorService ? (
+                <ErrorView onRetry={onRefresh} />
+              ) : (
+                <FlatList
+                  data={filteredServices}
+                  keyExtractor={(item) => item?.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.modalItem}
+                      onPress={() => {
+                        setShowTreatmentModal(false);
+                        toggleSelect(item);
+                      }}
+                    >
+                      <Text>
+                        {item?.name} - {item?.duration} Menit ({item?.qty})
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  initialNumToRender={5}
+                  maxToRenderPerBatch={5}
+                  windowSize={5}
+                  keyboardShouldPersistTaps="handled"
+                  ListEmptyComponent={() => (
+                    <View
+                      style={{
+                        flex: 1,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        marginTop: 50,
+                      }}
+                    >
+                      <Text style={{ fontSize: 16, color: "#999" }}>
+                        Tidak ada data tersedia
+                      </Text>
+                    </View>
+                  )}
+                />
+              )}
+
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowTreatmentModal(false)}
@@ -404,6 +563,7 @@ const BookingAppointmentScreen = () => {
           </View>
         </Modal>
       </ScrollView>
+
       <View>
         <TouchableOpacity style={styles.continueButton} onPress={handleBooking}>
           <Ionicons
@@ -415,6 +575,52 @@ const BookingAppointmentScreen = () => {
           <Text style={styles.buttonText}>BOOK</Text>
         </TouchableOpacity>
       </View>
+
+      {/* BOTTOM SHEET KLINIK */}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={["50%", "90%"]}
+        enablePanDownToClose
+        keyboardBehavior="interactive"
+        backgroundStyle={{ borderRadius: 20, backgroundColor: "#fff" }}
+      >
+        <BottomSheetFlatList
+          data={sortedClinics}
+          keyExtractor={(item: any) => String(item?.id)}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 300 }}
+          ListHeaderComponent={
+            <View style={{ padding: 16, backgroundColor: "#fff" }}>
+              <View
+                style={{
+                  backgroundColor: "#e5e7eb",
+                  borderRadius: 2,
+                  alignSelf: "center",
+                }}
+              />
+              <Text style={styles.modalTitleSheet}>Pilih Klinik Terdekat</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Cari Klinik..."
+                placeholderTextColor="#9ca3af"
+                onChangeText={setSearchQuery}
+                value={searchQuery}
+                onFocus={() => bottomSheetModalRef.current?.snapToIndex(1)}
+              />
+            </View>
+          }
+          stickyHeaderIndices={[0]}
+          ListEmptyComponent={() => (
+            <View style={{ padding: 32, alignItems: "center" }}>
+              <Text style={{ fontSize: 16, color: "#999" }}>
+                Tidak ada data tersedia
+              </Text>
+            </View>
+          )}
+          renderItem={renderItemLocation}
+        />
+      </BottomSheetModal>
     </SafeAreaView>
   );
 };
@@ -430,6 +636,8 @@ const styles = StyleSheet.create({
     color: "#888", // abu-abu biar beda dari text normal
     textAlign: "center",
     marginVertical: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   headerContainer: {
@@ -457,7 +665,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    alignItems: "center",
     marginVertical: 10,
+    marginBottom: 30,
   },
   timeButton: {
     paddingVertical: 10,
@@ -546,6 +756,15 @@ const styles = StyleSheet.create({
   sectionContainer: {
     marginBottom: 24,
     marginTop: 24,
+    padding: 20,
+    borderRadius: 16,
+    width: "100%",
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 16,
@@ -683,6 +902,97 @@ const styles = StyleSheet.create({
   },
   selectedText: { fontSize: 14, color: "#444", flex: 1, marginRight: 10 },
   qtyButtons: { flexDirection: "row", gap: 10 },
+  noTimeContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    borderRadius: 16,
+    backgroundColor: "#FFF5F5",
+    marginVertical: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  noTimeTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FF6B6B",
+    marginTop: 8,
+  },
+  noTimeSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  infoCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    borderRadius: 16,
+    width: "100%",
+    backgroundColor: "#FFF",
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 8,
+    color: "#333",
+    textAlign: "center",
+  },
+  infoSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  inputGroup: { marginHorizontal: 16, marginVertical: 15 },
+  text: { color: "#1e293b", fontSize: 14 },
+
+  dropdownContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    backgroundColor: "#fff",
+  },
+
+  modalTitleSheet: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+    color: "#111827",
+  },
+
+  clinicCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 10,
+    marginVertical: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  clinicNameText: { fontSize: 15, fontWeight: "600", color: "#1f2937" },
+  clinicDistanceText: { fontSize: 13, color: "#6b7280", marginTop: 2 },
 });
 
 export default BookingAppointmentScreen;

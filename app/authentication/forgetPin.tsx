@@ -45,7 +45,6 @@ export default function SetPin() {
   const router = useRouter();
   const customerId = useStore((state: { customerid: any }) => state.customerid);
   const { t } = useTranslation();
-
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const setHasPin = useStore((state) => state.setHasPin);
@@ -107,7 +106,6 @@ export default function SetPin() {
       setShowErrorModal(true);
       return;
     }
-
     mutationRequest.mutate({
       phone: `${customerDetails?.phone}`,
     });
@@ -224,9 +222,7 @@ async function registerForPushNotificationsAsync() {
     }
 
     return token;
-  } catch (e) {
-
-  }
+  } catch (e) {}
 }
 
 const styles = StyleSheet.create({

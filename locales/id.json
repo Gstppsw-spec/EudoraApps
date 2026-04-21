@@ -15,7 +15,7 @@
   "confirmLogout": "Apakah Anda yakin ingin keluar?",
   "welcome": "Selamat Datang",
   "login": "Masuk",
-  "input_whatsapp": "Masukkan nomor WhatsApp untuk melanjutkan",
+  "input_whatsapp": "Masukkan Nomor Handphone (WhatsApp) untuk melanjutkan",
   "input_verification": "Masukkan kode verifikasi yang telah dikirim",
   "sendOtpCode": "Kirim Kode OTP",
   "confirm": "Konfirmasi",
@@ -24,14 +24,14 @@
   "confirmOtpMessage": "Apakah Anda yakin ingin memverifikasi kode OTP?",
   "cancel": "Batal",
   "yesVerify": "Ya, Verifikasi",
-  "pleaseEnterWhatsapp": "Harap masukkan nomor WhatsApp terlebih dahulu",
+  "pleaseEnterWhatsapp": "Harap masukkan Nomor Handphone (WhatsApp) terlebih dahulu",
   "successTitle": "Berhasil!",
-  "otpSentMessage": "OTP telah dikirim ke nomor WhatsApp Anda",
+  "otpSentMessage": "OTP telah dikirim ke Nomor Handphone (WhatsApp) Anda",
   "noAccount": "Belum punya akun?",
   "register": "Daftar",
   "codeSentTo": "Kode dikirim ke ",
   "verificationCode": "Kode Verifikasi",
-  "whatsappNumber": "Nomor WhatsApp",
+  "whatsappNumber": "Nomor Handphone (WhatsApp)",
   "enter6DigitCode": "Masukkan 6 digit kode",
   "search": "Cari",
   "getPointsByReferring": "Dapatkan poin dengan mengundang teman Anda",
@@ -118,11 +118,9 @@
   "pinLengthError": "PIN harus terdiri dari 4-6 digit",
   "pinVerificationError": "Terjadi kesalahan saat verifikasi PIN",
 
-
-
   "changeProfilePhotos": "Ubah foto profil",
   "fullname": "Nama Lengkap",
-  "cellphoneNumber": "Whatsapp",
+  "cellphoneNumber": "Nomor Handphone (WhatsApp)",
   "dateOfBirth": "Tanggal Lahir",
   "gender": "Jenis Kelamin",
   "previewImage": "Pratinjau Gambar",
@@ -199,7 +197,6 @@
   "section8Title": "7. Kebijakan Pengembalian Dana",
   "section8Text": "Kami berkomitmen untuk memberikan kepuasan 100% kepada seluruh pelanggan kami. Jika terdapat masalah dengan pesanan atau layanan kami, silakan kirim email ke helpeudora@gmail.com dan kami akan berusaha semaksimal mungkin untuk membantu menyelesaikan masalah Anda.",
 
-
   "terms": {
     "titleHeader": "Syarat & Ketentuan",
     "title": "Syarat & Ketentuan - EUDORA AESTHETIC",
@@ -233,20 +230,19 @@
     "hello": "Saatnya transformasi cantikmu!",
     "upcomingAppointment": "Appointment mendatang",
     "seeAll": "Lihat Semua",
-    "noHistoryFound":"Tidak ada riwayat ditemukan",
+    "noHistoryFound": "Tidak ada riwayat ditemukan",
     "noUpcomingAppointments": "Anda belum memiliki janji temu mendatang",
     "ourBeautyEvent": "Event Kecantikan Kami,",
-    "copySuccess":"Refferal code berhasil dicopy!",
+    "copySuccess": "Refferal code berhasil dicopy!",
     "referralMessage": "Yuk daftar di Eudora Clinic! Gunakan kode referral: {{code}} biar dapat promo menarik ✨",
     "failedShare": "Gagal share refferal code!",
-    "remindMe":"Ingatkan Saya",
-    "services":"Layanan",
-    "cancelBooking":"Batalkan Janji",
-    "confirmCancelBooking":"Apakah Anda yakin ingin membatalkan janji temu ini?",
-    "cancel":"Batal",
-    "confirm":"Konfirmasi"
+    "remindMe": "Ingatkan Saya",
+    "services": "Layanan",
+    "cancelBooking": "Batalkan Janji",
+    "confirmCancelBooking": "Apakah Anda yakin ingin membatalkan janji temu ini?",
+    "cancel": "Batal",
+    "confirm": "Konfirmasi"
   },
   "myReferral": "Referal Saya",
   "registerDate": "Tanggal Registrasi"
-
 }

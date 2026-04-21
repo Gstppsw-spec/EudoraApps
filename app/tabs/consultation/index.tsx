@@ -32,7 +32,7 @@ const getChatListCustomer = async ({ queryKey }: any) => {
   return res.json();
 };
 
-export default function ChatList({ navigation }) {
+export default function ChatList({ navigation }: any) {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const customerId = useStore((state: { customerid: any }) => state.customerid);
@@ -53,7 +53,9 @@ export default function ChatList({ navigation }) {
       socket.emit("joinRoom", `userapps_${customerId}`);
     });
     socket.on("newMessage", (message) => {
-      queryClient.invalidateQueries(["getChatListCustomer", customerId]);
+      queryClient.invalidateQueries({
+        queryKey: ["getChatListCustomer", customerId],
+      });
     });
 
     return () => {
@@ -73,7 +75,7 @@ export default function ChatList({ navigation }) {
     setRefreshing(false);
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: any) => (
     <TouchableOpacity
       style={styles.chatItem}
       onPress={() =>
@@ -129,6 +131,38 @@ export default function ChatList({ navigation }) {
     </TouchableOpacity>
   );
 
+  if (isLoadingOutletAccess) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.mainHeader}>Chat</Text>
+        </View>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle="dark-content"
+        />
+        <LoadingView />
+      </SafeAreaView>
+    );
+  }
+
+  if (errorOutletAccess) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.mainHeader}>Chat</Text>
+        </View>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle="dark-content"
+        />
+        <ErrorView onRetry={onRefresh} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -143,7 +177,7 @@ export default function ChatList({ navigation }) {
       {isLoadingOutletAccess ? (
         <LoadingView />
       ) : errorOutletAccess ? (
-        <ErrorView onRetry={onRefresh}/>
+        <ErrorView onRetry={onRefresh} />
       ) : (
         <FlatList
           data={data?.data}

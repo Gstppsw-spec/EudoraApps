@@ -6,7 +6,9 @@ interface EmptyViewProps {
   message?: string;
 }
 
-const EmptyView: React.FC<EmptyViewProps> = ({ message = "Tidak ada data tersedia" }) => {
+const EmptyView: React.FC<EmptyViewProps> = ({
+  message = "Tidak ada data tersedia",
+}) => {
   return (
     <View style={styles.container}>
       <Ionicons name="folder-open-outline" size={60} color="#9CA3AF" />

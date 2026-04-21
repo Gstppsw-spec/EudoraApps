@@ -34,6 +34,7 @@ const setPinUsers = async (formData: any) => {
 export default function SetPin() {
   const router = useRouter();
   const customerId = useStore((state: { customerid: any }) => state.customerid);
+  const setJwtToken = useStore((state) => state.setJwtToken);
 
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -43,10 +44,10 @@ export default function SetPin() {
     mutationFn: setPinUsers,
     onSuccess: (data) => {
       if (data.status) {
-        setHasPin(true)
+        setJwtToken(data.token);
+        setHasPin(true);
         router.replace("/tabs/home");
-        registerForPushNotificationsAsync().then((token) => {
-        });
+        registerForPushNotificationsAsync().then((token) => {});
       } else {
         Alert.alert("Gagal", data.message || "Gagal menyimpan PIN");
       }
@@ -160,15 +161,12 @@ async function registerForPushNotificationsAsync() {
       }
 
       token = (await Notifications.getExpoPushTokenAsync()).data;
-
     } else {
       alert("Harus dijalankan di perangkat fisik!");
     }
 
     return token;
-  } catch (e) {
-
-  }
+  } catch (e) {}
 }
 
 const styles = StyleSheet.create({

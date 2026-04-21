@@ -1,5 +1,7 @@
 import AnimatedToast from "@/app/component/animatedToast";
+import ErrorView from "@/app/component/errorView";
 import HeaderWithCart from "@/app/component/headerWithCart";
+import LoadingView from "@/app/component/loadingView";
 import useStore from "@/store/useStore";
 import { AntDesign, FontAwesome } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -83,6 +85,7 @@ export default function ProductDetailScreen() {
     isLoading: isLoadingProduct,
     refetch: refetchProduct,
     isRefetching: isRefetchingProduct,
+    error,
   } = useQuery({
     queryKey: ["getDetailTreatment", productid, producttypeid],
     queryFn: fetchProductDetail,
@@ -117,7 +120,6 @@ export default function ProductDetailScreen() {
   const mutationDirectBuy = useMutation({
     mutationFn: postDataDirectBuy,
     onSuccess: (data) => {
-
       if (data?.status) {
         router.push("/payment/paymentDirectBuy");
       } else {
@@ -172,6 +174,24 @@ export default function ProductDetailScreen() {
     setRefreshing(false);
   };
 
+  if (isLoadingProduct) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <HeaderWithCart title="Eudora Services" useGoBack />
+        <LoadingView />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <HeaderWithCart title="Eudora Services" useGoBack />
+        <ErrorView onRetry={onRefresh} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <HeaderWithCart title="Eudora Services" useGoBack />
@@ -204,10 +224,22 @@ export default function ProductDetailScreen() {
 
         <Text style={styles.name}>{dataproduct?.data?.productname}</Text>
         <View style={styles.priceContainer}>
-          <Text style={styles.price}>
-            {formatRupiah(dataproduct?.data?.price)}
-          </Text>
+          {dataproduct?.data?.normal_price ? (
+            <>
+              <Text style={styles.priceNormal}>
+                {formatRupiah(dataproduct?.data?.normal_price)}
+              </Text>
+              <Text style={styles.priceDiscount}>
+                {formatRupiah(dataproduct?.data?.price)}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.price}>
+              {formatRupiah(dataproduct?.data?.price)}
+            </Text>
+          )}
         </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Deskripsi Produk</Text>
           <Text style={styles.description}>
@@ -290,8 +322,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   priceContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    // flexDirection: "row",
+    // alignItems: "center",
     marginVertical: 5,
     paddingHorizontal: 16,
   },
@@ -306,7 +338,12 @@ const styles = StyleSheet.create({
   ratingText: { marginLeft: 5, color: "#555" },
   section: { marginVertical: 10, paddingHorizontal: 16 },
   sectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
-  description: { fontSize: 14, color: "#555", lineHeight: 20 },
+  description: {
+    fontSize: 14,
+    color: "#555",
+    lineHeight: 20,
+    textAlign: "justify",
+  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -337,5 +374,16 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#FFF",
+  },
+  priceNormal: {
+    fontSize: 12,
+    color: "#999",
+    textDecorationLine: "line-through",
+    marginRight: 8,
+  },
+  priceDiscount: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FF6B81",
   },
 });

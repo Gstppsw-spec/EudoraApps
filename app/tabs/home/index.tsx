@@ -1,5 +1,6 @@
 import HeaderActions from "@/app/component/headerWithSearchCartNotification";
 import PopUpModal from "@/app/component/popUpModal";
+import PopUpUpdate from "@/app/component/popUpUpdate";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 import {
   BottomSheetBackdrop,
@@ -283,9 +284,12 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.containerArea}>
       <PopUpModal status={customerDetail?.detailcustomer[0]?.ISNEWCUSTOMER} />
+      <PopUpUpdate />
+      
       <ScrollView
         style={{ paddingTop: StatusBar.currentHeight }}
         showsVerticalScrollIndicator={false}
+        
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -450,7 +454,7 @@ export default function HomeScreen() {
             </View>
           </LinearGradient>
         </View>
-        <HeaderActions />
+        <HeaderActions  />
         <View
           style={{
             display: "flex",
@@ -479,32 +483,33 @@ export default function HomeScreen() {
         </View>
         {category?.listCategory?.length > 0 && (
           <View style={styles.containerCategory}>
-            {category?.listCategory.slice(0, 3).map((category, index) => {
-              return (
-                <View style={styles.iconCategory} key={index}>
-                  <TouchableOpacity
-                    style={styles.buttonIconCategory}
-                    onPress={() => router.push(`/category/${category.id}`)}
-                  >
-                    <FontAwesome
-                      name={category.icon}
-                      size={24}
-                      color="#B0174C"
-                    />
-                  </TouchableOpacity>
-                  <Text
-                    style={{
-                      fontSize: 10,
-                      fontWeight: "bold",
-                      textAlign: "center",
-                      marginTop: 2,
-                    }}
-                  >
-                    {category.name}
-                  </Text>
-                </View>
-              );
-            })}
+            {category?.listCategory
+              .slice(0, 3)
+              .map((category: any, index: any) => {
+                return (
+                  <View style={styles.iconCategory} key={index}>
+                    <TouchableOpacity
+                      style={styles.buttonIconCategory}
+                      onPress={() => router.push(`/category/${category.id}`)}
+                    >
+                      <Image
+                        source={{ uri: category.icon_image }}
+                        style={{ width: 60, height: 60, resizeMode: "contain" }}
+                      />
+                    </TouchableOpacity>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontWeight: "bold",
+                        textAlign: "center",
+                        marginTop: 2,
+                      }}
+                    >
+                      {category.name}
+                    </Text>
+                  </View>
+                );
+              })}
 
             <View style={styles.iconCategory}>
               <TouchableOpacity
@@ -839,9 +844,6 @@ const styles = StyleSheet.create({
   indicatorContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    // marginTop: 10,
-    // position: 'absolute',
-    // top: 200
   },
   containerArea: {
     flex: 1,
@@ -899,7 +901,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     margin: 8,
-    width: 80, // biar kotaknya konsisten
   },
   buttonIconCategory: {
     backgroundColor: "#FDECEF", // warna background soft pink
