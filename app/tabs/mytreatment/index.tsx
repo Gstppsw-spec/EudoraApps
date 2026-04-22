@@ -45,7 +45,7 @@ const YourTreatmentAndPackageScreen = () => {
   const treatments = treatmentsData?.treatment || [];
   const packages = packagesData?.membership || [];
 
-  // console.log(packages, "test");
+  console.log(treatments);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,7 +69,7 @@ const YourTreatmentAndPackageScreen = () => {
               selectedTab === "treatments" && styles.activeTabText,
             ]}
           >
-            Treatments
+            TREATMENTS
           </Text>
           {selectedTab === "treatments" && <View style={styles.tabIndicator} />}
         </TouchableOpacity>
@@ -86,7 +86,7 @@ const YourTreatmentAndPackageScreen = () => {
               selectedTab === "packages" && styles.activeTabText,
             ]}
           >
-            Packages
+            PACKAGES
           </Text>
           {selectedTab === "packages" && <View style={styles.tabIndicator} />}
         </TouchableOpacity>
@@ -132,15 +132,24 @@ const YourTreatmentAndPackageScreen = () => {
                         gap: 5,
                       }}
                     >
-                      <View style={styles.statusBadge}>
-                        <Text style={styles.statusText}>Active</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.statusBadgeBook}
-                        onPress={() => router.push("/bookappointment/booking")}
-                      >
-                        <Text style={styles.statusTextBook}>Book</Text>
-                      </TouchableOpacity>
+                      {treatment.REMAINING > 0 && !treatment.ISEXPIRED ? (
+                        <TouchableOpacity
+                          style={styles.statusBadgeBook}
+                          onPress={() =>
+                            router.push("/bookappointment/booking")
+                          }
+                        >
+                          <Text style={styles.statusTextBook}>Book</Text>
+                        </TouchableOpacity>
+                      ) : treatment.ISEXPIRED ? (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusText}>Expired</Text>
+                        </View>
+                      ) : treatment.REMAINING === 0 ? (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusText}>Used up</Text>
+                        </View>
+                      ) : null}
                     </View>
                   </View>
                   <Text style={styles.treatmentName}>
@@ -154,7 +163,7 @@ const YourTreatmentAndPackageScreen = () => {
                           styles.progressFill,
                           {
                             width: `${
-                              ((treatment.TERPAKAI || 0) /
+                              ((treatment.USEDTIMES || 0) /
                                 (treatment.TOTALTREATMENTS || 1)) *
                               100
                             }%`,
@@ -173,9 +182,24 @@ const YourTreatmentAndPackageScreen = () => {
                   <View style={styles.detailsContainer}>
                     <View style={styles.detailItem}>
                       <Ionicons name="calendar" size={16} color="#888" />
+                      <Text style={styles.detailText}>Purchase date:</Text>
                       <Text style={styles.detailText}>
                         {treatment.INVOICEDATE
                           ? new Date(treatment.INVOICEDATE).toLocaleDateString()
+                          : "No Date"}
+                      </Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={16}
+                        color="#888"
+                      />
+
+                      <Text style={styles.detailText}>Expired date:</Text>
+                      <Text style={styles.detailText}>
+                        {treatment.EXPIREDDATE
+                          ? new Date(treatment.EXPIREDDATE).toLocaleDateString()
                           : "No Date"}
                       </Text>
                     </View>
@@ -224,6 +248,7 @@ const YourTreatmentAndPackageScreen = () => {
                     <Text style={styles.invoiceNumber}>
                       #{packageItem.INVOICENO || "N/A"}
                     </Text>
+
                     <View
                       style={{
                         flexDirection: "row",
@@ -231,15 +256,24 @@ const YourTreatmentAndPackageScreen = () => {
                         gap: 5,
                       }}
                     >
-                      <View style={styles.statusBadge}>
-                        <Text style={styles.statusText}>Active</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.statusBadgeBook}
-                        onPress={() => router.push("/bookappointment/booking")}
-                      >
-                        <Text style={styles.statusTextBook}>Book</Text>
-                      </TouchableOpacity>
+                      {packageItem.REMAINING > 0 && !packageItem.ISEXPIRED ? (
+                        <TouchableOpacity
+                          style={styles.statusBadgeBook}
+                          onPress={() =>
+                            router.push("/bookappointment/booking")
+                          }
+                        >
+                          <Text style={styles.statusTextBook}>Book</Text>
+                        </TouchableOpacity>
+                      ) : packageItem.ISEXPIRED ? (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusText}>Expired</Text>
+                        </View>
+                      ) : packageItem.REMAINING === 0 ? (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusText}>Used Up</Text>
+                        </View>
+                      ) : null}
                     </View>
                   </View>
                   <Text style={styles.packageName}>
@@ -275,10 +309,27 @@ const YourTreatmentAndPackageScreen = () => {
                   <View style={styles.detailsContainer}>
                     <View style={styles.detailItem}>
                       <Ionicons name="calendar" size={16} color="#888" />
+                      <Text style={styles.detailText}>Purchase date:</Text>
                       <Text style={styles.detailText}>
                         {packageItem.INVOICEDATE
                           ? new Date(
                               packageItem.INVOICEDATE,
+                            ).toLocaleDateString()
+                          : "No Date"}
+                      </Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={16}
+                        color="#888"
+                      />
+
+                      <Text style={styles.detailText}>Expired date:</Text>
+                      <Text style={styles.detailText}>
+                        {packageItem.EXPIREDDATE
+                          ? new Date(
+                              packageItem.EXPIREDDATE,
                             ).toLocaleDateString()
                           : "No Date"}
                       </Text>
@@ -416,7 +467,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   treatmentName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     color: "#333",
     marginBottom: 8,

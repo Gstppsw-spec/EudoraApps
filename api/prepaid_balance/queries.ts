@@ -6,7 +6,7 @@ const fetchPrepaidBalanceInvoiceTreatment = async ({
   customerId,
 }: {
   customerId?: string;
-}): Promise<PrepaidResponse[]> => {
+}): Promise<PrepaidResponse> => {
   const { data } = await apiClient.get(
     `/getDetailTransactionTreatment/${customerId}`,
   );
@@ -17,7 +17,7 @@ const fetchPrepaidBalanceInvoicePackages = async ({
   customerId,
 }: {
   customerId?: string;
-}): Promise<PrepaidResponse[]> => {
+}): Promise<PrepaidResponse> => {
   const { data } = await apiClient.get(
     `/getDetailTransactionMembership/${customerId}`,
   );

@@ -185,12 +185,12 @@ const MyAccountScreen = () => {
         {/* General Section */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t("general")}</Text>
-          <Link href="/treatment/yourTeatment" asChild>
+          {/* <Link href="/treatment/yourTeatment" asChild>
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
               <Text style={styles.menuText}>{t("treatmentAndPackage")}</Text>
               <MaterialIcons name="chevron-right" size={24} color="#bbb" />
             </TouchableOpacity>
-          </Link>
+          </Link> */}
 
           <Link href="/mybooking/myBooking" asChild>
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
